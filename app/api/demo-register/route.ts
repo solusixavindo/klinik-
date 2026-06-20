@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server"
 import { DEMO_ACCOUNTS, getDemoAccountByPlan } from "@/lib/demoAccounts"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
+import {
+  hasValidSupabaseServiceRoleKey,
+  serviceRoleMisconfiguredResponse,
+} from "@/lib/supabaseServiceRoleCheck"
 
 const isMissingClinicSaasColumn = (error: { code?: string; message?: string } | null | undefined) =>
   error?.code === "PGRST204" ||
@@ -32,6 +36,10 @@ const getExistingUserByEmail = async (email: string) => {
 
 export async function POST(req: Request) {
   try {
+    if (!hasValidSupabaseServiceRoleKey()) {
+      return serviceRoleMisconfiguredResponse()
+    }
+
     const { plan } = await req.json()
     const account = getDemoAccountByPlan(plan)
 
@@ -164,10 +172,17 @@ export async function POST(req: Request) {
   } catch (err: unknown) {
     console.error("Demo registration failed", err)
     const message = err instanceof Error ? err.message : "Terjadi kesalahan saat menyiapkan akun demo"
+    const isInvalidApiKey = message.toLowerCase().includes("invalid api key")
 
     return NextResponse.json(
-      { success: false, error: message },
-      { status: 500 }
+      {
+        success: false,
+        code: isInvalidApiKey ? "SUPABASE_API_KEY_INVALID" : "DEMO_REGISTER_FAILED",
+        error: isInvalidApiKey
+          ? "Konfigurasi Supabase di Vercel belum benar. Pastikan NEXT_PUBLIC_SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY berisi key project Supabase yang sama, lalu redeploy."
+          : message,
+      },
+      { status: isInvalidApiKey ? 503 : 500 }
     )
   }
 }
