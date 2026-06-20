@@ -15,7 +15,7 @@ export type DashboardMenuGroup = {
 
 export const primaryMenu: DashboardMenuItem[] = [
   {
-    href: "/",
+    href: "/dashboard",
     label: "Dashboard",
     icon: "▦",
     description: "Ringkasan aktivitas klinik",
