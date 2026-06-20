@@ -7,6 +7,7 @@ export type DemoSession = {
 }
 
 const STORAGE_KEY = "xaviklinika-demo-session"
+const COOKIE_KEY = "xaviklinika-demo-session"
 
 export function getMatchingDemoAccount(email: string, password: string) {
   const account = getDemoAccountByEmail(email)
@@ -25,6 +26,7 @@ export function saveDemoSession(account: DemoAccount) {
       clinicName: account.clinicName,
     } satisfies DemoSession)
   )
+  document.cookie = `${COOKIE_KEY}=1; path=/; max-age=86400; SameSite=Lax`
 }
 
 export function getDemoSession(): DemoSession | null {
@@ -50,4 +52,5 @@ export function getDemoSession(): DemoSession | null {
 export function clearDemoSession() {
   if (typeof window === "undefined") return
   localStorage.removeItem(STORAGE_KEY)
+  document.cookie = `${COOKIE_KEY}=; path=/; max-age=0; SameSite=Lax`
 }
