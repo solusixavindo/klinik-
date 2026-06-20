@@ -88,6 +88,11 @@ export function useProfile() {
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session?.access_token) {
+        if (getDemoSession()) {
+          load()
+          return
+        }
+
         setProfile(null)
         setLoading(false)
         return
