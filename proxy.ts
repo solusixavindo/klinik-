@@ -12,8 +12,9 @@ export function proxy(request: NextRequest) {
   }
 
   const hasAuth = request.cookies.getAll().some((cookie) => cookie.name.includes("-auth-token") && cookie.value)
+  const hasDemoSession = request.cookies.get("xaviklinika-demo-session")?.value === "1"
 
-  if (!hasAuth && !pathname.startsWith("/api/")) {
+  if (!hasAuth && !hasDemoSession && !pathname.startsWith("/api/")) {
     return NextResponse.redirect(new URL("/login", request.url))
   }
 
