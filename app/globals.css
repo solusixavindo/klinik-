@@ -112,7 +112,9 @@ textarea {
 
 /* Input Styles */
 .input {
-  @apply w-full rounded-2xl border border-slate-700/40 bg-slate-900/40 backdrop-blur-sm px-4 py-3 text-slate-100 placeholder:text-slate-500 focus:border-indigo-500/60 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all;
+  @apply w-full rounded-2xl border border-slate-700/40 bg-slate-900/40 backdrop-blur-sm px-4 py-3 text-slate-100 caret-indigo-300 placeholder:text-slate-500 focus:border-indigo-500/60 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all;
+  color: rgb(241 245 249) !important;
+  -webkit-text-fill-color: rgb(241 245 249);
 }
 
 .input::placeholder {
@@ -121,6 +123,16 @@ textarea {
 
 .input:focus {
   @apply bg-slate-900/60;
+}
+
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.input:-webkit-autofill:focus {
+  border-color: rgba(99, 102, 241, 0.6);
+  box-shadow: 0 0 0 1000px rgba(15, 23, 42, 0.95) inset;
+  -webkit-box-shadow: 0 0 0 1000px rgba(15, 23, 42, 0.95) inset;
+  -webkit-text-fill-color: rgb(241 245 249);
+  caret-color: rgb(165 180 252);
 }
 
 /* Badge & Pills */
@@ -288,6 +300,7 @@ select.input option:hover {
   background: rgba(255, 255, 255, 0.9) !important;
   border-color: rgba(148, 163, 184, 0.55) !important;
   color: #102033 !important;
+  -webkit-text-fill-color: #102033;
 }
 
 [data-theme="light"] .input::placeholder {
