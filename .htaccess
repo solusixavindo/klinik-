@@ -1,0 +1,3 @@
+# Hostinger Node.js deployment does not require Apache proxy rules here.
+# If you use Node.js hosting, start the app with `npm start`.
+# Keep this file empty or remove it if Apache is not managing the Node.js process.
