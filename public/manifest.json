@@ -1,0 +1,20 @@
+{
+  "name": "XaviKlinika",
+  "short_name": "XaviKlinika",
+  "description": "Sistem Manajemen Klinik Modern",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#030712",
+  "theme_color": "#4f46e5",
+  "orientation": "any",
+  "icons": [
+    { "src": "/logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "screenshots": [
+    { "src": "/logo.png", "sizes": "1280x720", "type": "image/png", "form_factor": "wide" }
+  ],
+  "categories": ["medical", "health", "productivity"],
+  "lang": "id",
+  "dir": "ltr"
+}
