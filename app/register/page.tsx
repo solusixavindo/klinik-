@@ -23,11 +23,14 @@ export default function RegisterPage() {
 function RegisterPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [mode, setMode] = useState<Mode>("register")
 
   // Baca ?plan= dari URL dan pre-select paket
   const planFromUrl = searchParams.get("plan") as PlanCode | null
   const initialPlan: PlanCode = planFromUrl && validPlans.includes(planFromUrl) ? planFromUrl : "trial"
+  const demoFromUrl = searchParams.get("mode") === "demo" || searchParams.has("demo")
+  const initialDemoPlan: PlanCode =
+    planFromUrl && paidPlans.includes(planFromUrl) ? planFromUrl : "basic"
+  const [mode, setMode] = useState<Mode>(demoFromUrl ? "demo" : "register")
 
   // Form registrasi nyata
   const [form, setForm] = useState({ clinic_name: "", email: "", password: "", plan: initialPlan })
@@ -38,11 +41,24 @@ function RegisterPageInner() {
       setForm(f => ({ ...f, plan: planFromUrl }))
     }
   }, [planFromUrl])
+
+  useEffect(() => {
+    if (demoFromUrl) {
+      setMode("demo")
+    }
+  }, [demoFromUrl])
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
   // Demo
-  const [selectedDemo, setSelectedDemo] = useState<PlanCode>("basic")
+  const [selectedDemo, setSelectedDemo] = useState<PlanCode>(initialDemoPlan)
+
+  useEffect(() => {
+    if (planFromUrl && paidPlans.includes(planFromUrl)) {
+      setSelectedDemo(planFromUrl)
+    }
+  }, [planFromUrl])
 
   const handleRegister = async () => {
     if (!form.clinic_name || !form.email || !form.password) {
