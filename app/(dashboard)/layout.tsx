@@ -15,6 +15,7 @@ import {
   type PlanCode,
 } from "@/lib/billing"
 import { getDemoAccountByEmail } from "@/lib/demoAccounts"
+import { getDemoSession } from "@/lib/demoSession"
 
 type Subscription = {
   plan: Plan
@@ -49,6 +50,11 @@ export default function Layout({
   useEffect(() => {
     let mounted = true
     const gate = async () => {
+      if (getDemoSession()) {
+        if (mounted) setAuthenticated(true)
+        return
+      }
+
       const { data } = await supabase.auth.getSession()
       if (!mounted) return
       if (!data.session) {
@@ -61,6 +67,11 @@ export default function Layout({
     gate()
     const { data: gateListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
+        if (getDemoSession()) {
+          setAuthenticated(true)
+          return
+        }
+
         router.replace("/login")
         setAuthenticated(false)
         return
@@ -83,6 +94,19 @@ export default function Layout({
 
       const accessToken = token || (await supabase.auth.getSession()).data.session?.access_token
       if (!accessToken) {
+        const demoSession = getDemoSession()
+        if (demoSession) {
+          setSubscription({
+            plan: PLANS[demoSession.plan],
+            status: "active",
+            is_active: true,
+            days_remaining: 30,
+          })
+          setSubscriptionError(null)
+          setSubscriptionLoading(false)
+          return
+        }
+
         setSubscriptionLoading(false)
         setSubscription(null)
         return
