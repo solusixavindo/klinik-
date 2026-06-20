@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { getDemoSession } from "@/lib/demoSession"
 
 type Profile = {
   id: string
@@ -21,6 +22,20 @@ export function useProfile() {
     let mounted = true
 
     const load = async () => {
+      const demoSession = getDemoSession()
+      if (demoSession) {
+        if (mounted) {
+          setProfile({
+            id: `demo-${demoSession.plan}`,
+            clinic_id: `demo-${demoSession.plan}`,
+            role: "admin",
+            clinics: { name: demoSession.clinicName },
+          })
+          setLoading(false)
+        }
+        return
+      }
+
       const {
         data: { session },
       } = await supabase.auth.getSession()
@@ -91,6 +106,7 @@ export function useProfile() {
     if (profile) return
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (getDemoSession()) return
       if (!session) router.replace("/login")
     })
   }, [loading, profile, router])
