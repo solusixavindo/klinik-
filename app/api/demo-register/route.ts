@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server"
 import { DEMO_ACCOUNTS, getDemoAccountByPlan } from "@/lib/demoAccounts"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
-import {
-  hasValidSupabaseServiceRoleKey,
-  serviceRoleMisconfiguredResponse,
-} from "@/lib/supabaseServiceRoleCheck"
+import { hasValidSupabaseServiceRoleKey } from "@/lib/supabaseServiceRoleCheck"
 
 const isMissingClinicSaasColumn = (error: { code?: string; message?: string } | null | undefined) =>
   error?.code === "PGRST204" ||
@@ -36,10 +33,6 @@ const getExistingUserByEmail = async (email: string) => {
 
 export async function POST(req: Request) {
   try {
-    if (!hasValidSupabaseServiceRoleKey()) {
-      return serviceRoleMisconfiguredResponse()
-    }
-
     const { plan } = await req.json()
     const account = getDemoAccountByPlan(plan)
 
@@ -51,6 +44,16 @@ export async function POST(req: Request) {
         },
         { status: 400 }
       )
+    }
+
+    if (!hasValidSupabaseServiceRoleKey()) {
+      return NextResponse.json({
+        success: true,
+        account,
+        setupSkipped: true,
+        warning:
+          "Demo memakai akun yang sudah tersedia. Untuk auto-setup akun demo, isi SUPABASE_SERVICE_ROLE_KEY di Vercel lalu redeploy.",
+      })
     }
 
     let user = await getExistingUserByEmail(account.email)
