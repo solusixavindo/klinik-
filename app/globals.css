@@ -1,0 +1,302 @@
+@import "tailwindcss";
+
+:root {
+  /* Modern Premium Dark Palette */
+  --background: #0f0f1e;
+  --surface: #1a1a2e;
+  --surface-hover: #242438;
+  --surface-alt: #16213e;
+  --foreground: #e8e9f3;
+  --foreground-secondary: #b4b5c8;
+  --muted: #7a7b8c;
+  --border: rgba(148, 163, 184, 0.08);
+  --primary: #6366f1;
+  --primary-light: #818cf8;
+  --primary-dark: #4f46e5;
+  --accent: #8b5cf6;
+  --accent-light: #a78bfa;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 30px 90px rgba(0, 0, 0, 0.6);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background: linear-gradient(135deg, #0f0f1e 0%, #1a0f2e 100%);
+  color: var(--foreground);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  letter-spacing: 0.3px;
+}
+
+::selection {
+  background: rgba(99, 102, 241, 0.3);
+  color: var(--foreground);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button,
+a {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+input,
+textarea {
+  transition: all 0.2s ease;
+}
+
+/* Card Components */
+.card {
+  @apply bg-gradient-to-br from-slate-800/30 to-slate-900/20 border border-slate-700/20 backdrop-blur-xl rounded-3xl p-8;
+  box-shadow: var(--shadow-sm);
+}
+
+.card:hover {
+  @apply border-slate-600/30;
+  box-shadow: var(--shadow);
+}
+
+.card-alt {
+  @apply bg-gradient-to-br from-slate-800/20 to-slate-900/10 border border-slate-700/15 backdrop-blur-lg rounded-2xl p-6;
+  box-shadow: var(--shadow-sm);
+}
+
+.card-interactive {
+  @apply bg-gradient-to-br from-indigo-950/40 to-slate-900/30 border border-indigo-700/20 backdrop-blur-xl rounded-3xl p-8 hover:from-indigo-950/50 hover:to-slate-900/40 hover:border-indigo-600/30;
+}
+
+/* Premium Button Styles */
+.btn-primary {
+  @apply inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 px-6 py-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-indigo-400/50 disabled:opacity-50 disabled:cursor-not-allowed;
+  box-shadow: 0 8px 16px rgba(99, 102, 241, 0.2);
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  @apply from-indigo-500 to-indigo-400;
+  box-shadow: 0 12px 24px rgba(99, 102, 241, 0.3);
+}
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center rounded-2xl border border-slate-600/50 bg-slate-800/30 backdrop-blur-sm px-6 py-3 text-sm font-medium text-slate-100 hover:bg-slate-800/60 hover:border-slate-500/70 focus:ring-2 focus:ring-indigo-400/30 transition-all;
+}
+
+.btn-tertiary {
+  @apply inline-flex items-center justify-center rounded-2xl px-6 py-3 text-sm font-medium text-indigo-400 hover:text-indigo-300 hover:bg-indigo-950/20 transition-all;
+}
+
+.btn-ghost {
+  @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition-all;
+}
+
+.btn-small {
+  @apply inline-flex items-center justify-center rounded-xl px-3 py-1.5 text-xs font-medium;
+}
+
+/* Input Styles */
+.input {
+  @apply w-full rounded-2xl border border-slate-700/40 bg-slate-900/40 backdrop-blur-sm px-4 py-3 text-slate-100 placeholder:text-slate-500 focus:border-indigo-500/60 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all;
+}
+
+.input::placeholder {
+  @apply text-slate-500;
+}
+
+.input:focus {
+  @apply bg-slate-900/60;
+}
+
+/* Badge & Pills */
+.badge {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold;
+}
+
+.badge-primary {
+  @apply bg-indigo-950/40 text-indigo-300 border border-indigo-700/40;
+}
+
+.badge-success {
+  @apply bg-emerald-950/40 text-emerald-300 border border-emerald-700/40;
+}
+
+.badge-warning {
+  @apply bg-amber-950/40 text-amber-300 border border-amber-700/40;
+}
+
+.badge-danger {
+  @apply bg-red-950/40 text-red-300 border border-red-700/40;
+}
+
+/* Text Utilities */
+.text-gradient {
+  @apply bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent;
+}
+
+.text-muted {
+  @apply text-slate-400;
+}
+
+.text-subtle {
+  @apply text-slate-500;
+}
+
+/* Divider */
+.divider {
+  @apply border-t border-slate-700/20;
+}
+
+/* Loading State */
+.loading-pulse {
+  @apply animate-pulse;
+}
+
+/* Select Styling */
+select.input {
+  @apply appearance-none cursor-pointer pr-10;
+  background-position: right 0.75rem center;
+  background-size: 1.25rem;
+  padding-right: 2.5rem;
+}
+
+select.input option {
+  @apply bg-slate-900 text-slate-100;
+}
+
+select.input option:hover {
+  @apply bg-indigo-600;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}
+
+/* Animation Utilities */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* Optional client-facing light theme.
+   Dark remains the default visual identity; these overrides only apply when
+   the dashboard layout sets data-theme="light" on the document element. */
+[data-theme="light"] body {
+  background: #f5f8fc;
+  color: #102033;
+}
+
+[data-theme="light"] .theme-shell {
+  background: linear-gradient(135deg, #f6f9fd 0%, #eef5fb 100%) !important;
+  color: #102033 !important;
+}
+
+[data-theme="light"] .theme-mobile-header,
+[data-theme="light"] .theme-sidebar,
+[data-theme="light"] .theme-main,
+[data-theme="light"] .theme-hero {
+  background: rgba(255, 255, 255, 0.88) !important;
+  background-image: none !important;
+  border-color: rgba(203, 213, 225, 0.7) !important;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08) !important;
+}
+
+[data-theme="light"] .theme-main .bg-gradient-to-br,
+[data-theme="light"] .theme-main .bg-gradient-to-r {
+  background: rgba(255, 255, 255, 0.9) !important;
+  background-image: none !important;
+}
+
+[data-theme="light"] .theme-main [class*="border-slate"],
+[data-theme="light"] .theme-sidebar [class*="border-slate"],
+[data-theme="light"] .theme-mobile-header [class*="border-slate"] {
+  border-color: rgba(203, 213, 225, 0.75) !important;
+}
+
+[data-theme="light"] .theme-main .text-white,
+[data-theme="light"] .theme-sidebar .text-white,
+[data-theme="light"] .theme-mobile-header .text-slate-100 {
+  color: #102033 !important;
+}
+
+[data-theme="light"] .theme-main .text-slate-100,
+[data-theme="light"] .theme-main .text-slate-200,
+[data-theme="light"] .theme-main .text-slate-300 {
+  color: #24364a !important;
+}
+
+[data-theme="light"] .theme-main .text-slate-400,
+[data-theme="light"] .theme-main .text-slate-500,
+[data-theme="light"] .theme-sidebar .text-slate-300,
+[data-theme="light"] .theme-sidebar .text-slate-400,
+[data-theme="light"] .theme-sidebar .text-slate-500 {
+  color: #607086 !important;
+}
+
+[data-theme="light"] .theme-sidebar a:not(:hover),
+[data-theme="light"] .theme-mobile-header a:not(:hover) {
+  color: #40516a !important;
+}
+
+[data-theme="light"] .theme-toggle {
+  background: #eef5ff;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  color: #315071;
+}
+
+[data-theme="light"] .input {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(148, 163, 184, 0.55) !important;
+  color: #102033 !important;
+}
+
+[data-theme="light"] .input::placeholder {
+  color: #8a98aa !important;
+}
+
+[data-theme="light"] .btn-secondary,
+[data-theme="light"] .btn-ghost {
+  background: rgba(255, 255, 255, 0.75) !important;
+  border-color: rgba(148, 163, 184, 0.5) !important;
+  color: #24364a !important;
+}
