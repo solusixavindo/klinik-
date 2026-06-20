@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { PLANS } from "@/lib/billing"
 import { DEMO_ACCOUNTS } from "@/lib/demoAccounts"
+import { getMatchingDemoAccount, saveDemoSession } from "@/lib/demoSession"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -42,7 +43,14 @@ export default function LoginPage() {
         password,
       })
 
-      if (signInError) throw signInError
+      if (signInError) {
+        const demoAccount = getMatchingDemoAccount(email, password)
+        if (!demoAccount) throw signInError
+
+        saveDemoSession(demoAccount)
+        router.push("/")
+        return
+      }
 
       router.push("/")
     } catch (err: unknown) {
