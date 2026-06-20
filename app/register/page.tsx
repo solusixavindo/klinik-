@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { PLANS, PlanCode } from "@/lib/billing"
 import { DEMO_ACCOUNTS, getDemoAccountByPlan } from "@/lib/demoAccounts"
+import { saveDemoSession } from "@/lib/demoSession"
 
 type Mode = "register" | "demo"
 
@@ -81,24 +82,11 @@ function RegisterPageInner() {
       setLoading(true)
       setError("")
 
-      const res = await fetch("/api/demo-register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: selectedDemo }),
-      })
-      const data = await res.json()
+      const account = getDemoAccountByPlan(selectedDemo)
+      if (!account) throw new Error("Paket demo tidak tersedia")
 
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Gagal menyiapkan akun demo")
-      }
-
-      const account = data.account
-      const params = new URLSearchParams({
-        email: account.email,
-        password: account.password,
-        registered: "1",
-      })
-      router.push(`/login?${params.toString()}`)
+      saveDemoSession(account)
+      router.push("/dashboard")
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Terjadi kesalahan")
     } finally {
