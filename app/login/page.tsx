@@ -48,11 +48,11 @@ export default function LoginPage() {
         if (!demoAccount) throw signInError
 
         saveDemoSession(demoAccount)
-        router.push("/")
+        router.push("/dashboard")
         return
       }
 
-      router.push("/")
+      router.push("/dashboard")
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Terjadi kesalahan saat login"
       setError(message)
