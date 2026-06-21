@@ -1,8 +1,4 @@
 const CACHE_NAME = 'xaviklinika-v2'
-const STATIC_ASSETS = [
-  '/manifest.json',
-  '/logo.png',
-]
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.delete(CACHE_NAME))
