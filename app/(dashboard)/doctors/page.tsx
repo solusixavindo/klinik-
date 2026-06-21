@@ -4,6 +4,8 @@
 import { useCallback, useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useProfile } from "@/hooks/useProfile"
+import { getDemoSession } from "@/lib/demoSession"
+import { demoDoctors } from "@/lib/demoData"
 
 type Doctor = {
   id: string
@@ -33,6 +35,11 @@ export default function DoctorsPage() {
 
   const fetchData = useCallback(async () => {
     if (!profile) return
+
+    if (getDemoSession()) {
+      setData(demoDoctors)
+      return
+    }
 
     const query = profile.clinic_id
       ? supabase.from("doctors").select("*").eq("clinic_id", profile.clinic_id)
@@ -65,11 +72,25 @@ export default function DoctorsPage() {
 
     setSaving(true)
     const payload = {
+      id: editId ?? `demo-doctor-${Date.now()}`,
       name: form.name.trim(),
       specialization: form.specialization.trim(),
-      phone: form.phone.trim() || null,
-      email: form.email.trim() || null,
-      experience: form.experience.trim() || null,
+      phone: form.phone.trim() || undefined,
+      email: form.email.trim() || undefined,
+      experience: form.experience.trim() || undefined,
+    }
+
+    if (getDemoSession()) {
+      setData((current) =>
+        editId
+          ? current.map((item) => item.id === editId ? { ...item, ...payload } : item)
+          : [{ ...payload, clinic_id: profile.clinic_id }, ...current]
+      )
+      setSaving(false)
+      setEditId(null)
+      setForm(initialForm)
+      setShowForm(false)
+      return
     }
 
     const action = editId
@@ -92,6 +113,11 @@ export default function DoctorsPage() {
 
   const del = async (id: string) => {
     if (!confirm("Hapus dokter ini?")) return
+    if (getDemoSession()) {
+      setData((current) => current.filter((item) => item.id !== id))
+      return
+    }
+
     const { error } = await supabase.from("doctors").delete().eq("id", id)
     if (error) {
       alert(error.message)
