@@ -16,6 +16,9 @@ export default function PwaInstaller() {
     // Register SW
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {})
+      caches?.keys?.()
+        .then((keys) => Promise.all(keys.filter((key) => key !== "xaviklinika-v2").map((key) => caches.delete(key))))
+        .catch(() => {})
     }
 
     // Cek apakah sudah diinstall
