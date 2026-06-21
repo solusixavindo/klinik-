@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { getPlan } from "@/lib/billing"
+import { getDemoSession } from "@/lib/demoSession"
+import { getDemoClinicSettings } from "@/lib/demoData"
 
 type ClinicSettings = {
   id: string
@@ -33,6 +35,19 @@ export default function PengaturanPage() {
     setLoading(true)
     setError("")
     try {
+      const demoSession = getDemoSession()
+      if (demoSession) {
+        const demoClinic = getDemoClinicSettings(demoSession)
+        setClinic(demoClinic)
+        setForm({
+          name: demoClinic.name,
+          address: demoClinic.address ?? "",
+          phone: demoClinic.phone ?? "",
+          email: demoClinic.email ?? "",
+        })
+        return
+      }
+
       const token = await getToken()
       const res = await fetch("/api/pengaturan", { headers: { Authorization: `Bearer ${token}` } })
       const data = await res.json()
@@ -59,6 +74,12 @@ export default function PengaturanPage() {
     setError("")
     setSuccess("")
     try {
+      if (getDemoSession()) {
+        setClinic((current) => current ? { ...current, ...form } : current)
+        setSuccess("Mode demo: perubahan pengaturan disimulasikan dan tidak disimpan ke Supabase.")
+        return
+      }
+
       const token = await getToken()
       const res = await fetch("/api/pengaturan", {
         method: "PATCH",
