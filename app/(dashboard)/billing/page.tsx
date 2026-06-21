@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { PLANS, PlanCode } from "@/lib/billing"
+import { getDemoSession } from "@/lib/demoSession"
+import { getDemoSubscription } from "@/lib/demoData"
 
 type SubscriptionResponse = {
   success?: boolean
@@ -35,6 +37,13 @@ export default function BillingPage() {
 
   useEffect(() => {
     const fetchSubscription = async () => {
+      const demoSession = getDemoSession()
+      if (demoSession) {
+        setSubscription(getDemoSubscription(demoSession.plan))
+        setLoading(false)
+        return
+      }
+
       const { data: sessionData } = await supabase.auth.getSession()
       const token = sessionData.session?.access_token
 
@@ -63,6 +72,12 @@ export default function BillingPage() {
   }, [])
 
   const checkout = async (plan: PlanCode) => {
+    if (getDemoSession()) {
+      alert("Mode demo: perubahan paket hanya simulasi. Untuk aktivasi real, gunakan akun klinik asli.")
+      setSubscription(getDemoSubscription(plan))
+      return
+    }
+
     // For premium plan, redirect to WhatsApp
     if (plan === "premium") {
       window.open("https://wa.me/628139536886?text=Halo,%20saya%20ingin%20konsultasi%20tentang%20paket%20Premium%20untuk%20klinik%20saya", "_blank")
