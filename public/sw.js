@@ -1,7 +1,5 @@
-const CACHE_NAME = 'xaviklinika-v1'
+const CACHE_NAME = 'xaviklinika-v2'
 const STATIC_ASSETS = [
-  '/',
-  '/login',
   '/manifest.json',
   '/logo.png',
 ]
@@ -23,6 +21,11 @@ self.addEventListener('activate', (event) => {
 })
 
 self.addEventListener('fetch', (event) => {
+  if (event.request.mode === 'navigate') {
+    event.respondWith(fetch(event.request))
+    return
+  }
+
   // Network first untuk API calls
   if (event.request.url.includes('/api/')) {
     event.respondWith(
@@ -34,6 +37,7 @@ self.addEventListener('fetch', (event) => {
     )
     return
   }
+
   // Cache first untuk static assets
   event.respondWith(
     caches.match(event.request).then(cached => cached || fetch(event.request))
