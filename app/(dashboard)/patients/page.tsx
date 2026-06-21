@@ -4,6 +4,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useProfile } from "@/hooks/useProfile"
+import { getDemoSession } from "@/lib/demoSession"
+import { demoPatients } from "@/lib/demoData"
 
 type Patient = {
   id: string
@@ -37,6 +39,11 @@ export default function PatientsPage() {
   const fetchData = useCallback(async () => {
     if (!profile?.clinic_id) return
 
+    if (getDemoSession()) {
+      setData(demoPatients)
+      return
+    }
+
     setLoading(true)
     const { data: patientsData, error } = await supabase
       .from("patients")
@@ -64,12 +71,25 @@ export default function PatientsPage() {
     }
 
     const payload = {
+      id: editId ?? `demo-patient-${Date.now()}`,
       name: form.name,
       phone: form.phone,
-      gender: form.gender || null,
-      birth_date: form.birth_date || null,
-      address: form.address || null,
+      gender: form.gender || undefined,
+      birth_date: form.birth_date || undefined,
+      address: form.address || undefined,
       clinic_id: profile?.clinic_id,
+    }
+
+    if (getDemoSession()) {
+      setData((current) =>
+        editId
+          ? current.map((item) => item.id === editId ? { ...item, ...payload } : item)
+          : [{ ...payload, created_at: new Date().toISOString() }, ...current]
+      )
+      setEditId(null)
+      setForm(initialForm)
+      setShowForm(false)
+      return
     }
 
     const action = editId
@@ -90,6 +110,11 @@ export default function PatientsPage() {
 
   const del = async (id: string) => {
     if (!confirm("Hapus pasien ini?")) return
+    if (getDemoSession()) {
+      setData((current) => current.filter((item) => item.id !== id))
+      return
+    }
+
     const { error } = await supabase.from("patients").delete().eq("id", id)
     if (error) {
       alert(error.message)
@@ -293,4 +318,3 @@ export default function PatientsPage() {
     </div>
   )
 }
-
