@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { useProfile } from "@/hooks/useProfile"
+import { getDemoSession } from "@/lib/demoSession"
+import { demoDoctors, demoPatients, getDemoBookings } from "@/lib/demoData"
 
 type Patient = {
   id: string
@@ -43,6 +45,13 @@ export default function BookingPage() {
 
   const fetchAll = useCallback(async () => {
     if (!clinicId) return
+
+    if (getDemoSession()) {
+      setPatients(demoPatients)
+      setDoctors(demoDoctors)
+      setData(getDemoBookings())
+      return
+    }
 
     setLoadingData(true)
 
@@ -102,6 +111,25 @@ export default function BookingPage() {
     setSaving(true)
 
     try {
+      if (getDemoSession()) {
+        const patient = patients.find((item) => item.id === form.patient_id)
+        const doctor = doctors.find((item) => item.id === form.doctor_id)
+        const booking: Booking = {
+          id: `demo-booking-${Date.now()}`,
+          patient_id: form.patient_id,
+          doctor_id: form.doctor_id,
+          clinic_id: clinicId,
+          visit_date: form.visit_date,
+          price,
+          payment_status: "pending",
+          patients: patient,
+          doctors: doctor,
+        }
+        setForm({ patient_id: "", doctor_id: "", visit_date: "", price: "" })
+        setData((current) => [booking, ...current])
+        return
+      }
+
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.access_token) {
         alert("Sesi login tidak valid. Silakan login ulang.")
