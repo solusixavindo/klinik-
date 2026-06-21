@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
+import { useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { PLANS, PlanCode } from "@/lib/billing"
@@ -35,30 +35,11 @@ function RegisterPageInner() {
   // Form registrasi nyata
   const [form, setForm] = useState({ clinic_name: "", email: "", password: "", plan: initialPlan })
 
-  // Sync plan jika URL berubah
-  useEffect(() => {
-    if (planFromUrl && validPlans.includes(planFromUrl)) {
-      setForm(f => ({ ...f, plan: planFromUrl }))
-    }
-  }, [planFromUrl])
-
-  useEffect(() => {
-    if (demoFromUrl) {
-      setMode("demo")
-    }
-  }, [demoFromUrl])
-
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
   // Demo
   const [selectedDemo, setSelectedDemo] = useState<PlanCode>(initialDemoPlan)
-
-  useEffect(() => {
-    if (planFromUrl && paidPlans.includes(planFromUrl)) {
-      setSelectedDemo(planFromUrl)
-    }
-  }, [planFromUrl])
 
   const handleRegister = async () => {
     if (!form.clinic_name || !form.email || !form.password) {
