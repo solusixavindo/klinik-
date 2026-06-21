@@ -26,7 +26,7 @@ export function saveDemoSession(account: DemoAccount) {
       clinicName: account.clinicName,
     } satisfies DemoSession)
   )
-  document.cookie = `${COOKIE_KEY}=1; path=/; max-age=86400; SameSite=Lax`
+  document.cookie = `${COOKIE_KEY}=${account.plan}; path=/; max-age=86400; SameSite=Lax`
 }
 
 export function getDemoSession(): DemoSession | null {
