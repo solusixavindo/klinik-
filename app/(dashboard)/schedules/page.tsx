@@ -4,6 +4,8 @@
 import { useCallback, useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useProfile } from "@/hooks/useProfile"
+import { getDemoSession } from "@/lib/demoSession"
+import { demoDoctors, demoSchedules } from "@/lib/demoData"
 
 type Doctor = {
   id: string
@@ -52,6 +54,11 @@ export default function SchedulePage() {
   const fetchSchedules = useCallback(async () => {
     if (!profile) return
 
+    if (getDemoSession()) {
+      setData(demoSchedules)
+      return
+    }
+
     const { data: sessionData } = await supabase.auth.getSession()
     const token = sessionData.session?.access_token
     if (!token) {
@@ -96,6 +103,11 @@ export default function SchedulePage() {
     if (!profile) return
 
     const fetchDoctors = async () => {
+      if (getDemoSession()) {
+        setDoctors(demoDoctors.map((doctor) => ({ id: doctor.id, name: doctor.name })))
+        return
+      }
+
       const query = profile.clinic_id
         ? supabase.from("doctors").select("id, name").eq("clinic_id", profile.clinic_id)
         : supabase.from("doctors").select("id, name")
@@ -120,6 +132,22 @@ export default function SchedulePage() {
     setSaving(true)
 
     try {
+      if (getDemoSession()) {
+        const doctor = demoDoctors.find((item) => item.id === form.doctor_id)
+        setData((current) => [
+          {
+            id: `demo-schedule-${Date.now()}`,
+            day: form.day,
+            start_time: form.start_time,
+            end_time: form.end_time,
+            doctors: doctor ? { id: doctor.id, name: doctor.name } : undefined,
+          },
+          ...current,
+        ])
+        setForm({ doctor_id: "", day: "", start_time: "", end_time: "" })
+        return
+      }
+
       const { data: sessionData } = await supabase.auth.getSession()
       const token = sessionData.session?.access_token
       if (!token) {
@@ -172,6 +200,11 @@ export default function SchedulePage() {
     if (!confirm("Hapus jadwal ini?")) return
 
     try {
+      if (getDemoSession()) {
+        setData((current) => current.filter((item) => item.id !== id))
+        return
+      }
+
       const { data: sessionData } = await supabase.auth.getSession()
       const token = sessionData.session?.access_token
       if (!token) {
