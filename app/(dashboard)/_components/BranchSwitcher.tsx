@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { supabase } from "@/lib/supabase"
+import { getDemoSession } from "@/lib/demoSession"
 
 type Branch = {
   id: string
@@ -23,8 +24,23 @@ export default function BranchSwitcher() {
     setActiveBranchId(stored)
 
     const load = async () => {
+      const demoSession = getDemoSession()
+      if (demoSession) {
+        if (demoSession.plan === "premium") {
+          setBranches([
+            { id: "demo-branch-utara", name: "Cabang Utara", is_active: true },
+            { id: "demo-branch-selatan", name: "Cabang Selatan", is_active: true },
+          ])
+        }
+        setLoaded(true)
+        return
+      }
+
       const token = (await supabase.auth.getSession()).data.session?.access_token
-      if (!token) return
+      if (!token) {
+        setLoaded(true)
+        return
+      }
       const res = await fetch("/api/branches", { headers: { Authorization: `Bearer ${token}` } })
       const data = await res.json()
       if (data.success) {
