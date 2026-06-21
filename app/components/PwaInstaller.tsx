@@ -13,11 +13,13 @@ export default function PwaInstaller() {
   const [isInstalled, setIsInstalled] = useState(false)
 
   useEffect(() => {
-    // Register SW
+    // Disable stale PWA caches so the app shell never serves the old landing page.
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => {})
+      navigator.serviceWorker.getRegistrations()
+        .then((registrations) => Promise.all(registrations.map((registration) => registration.unregister())))
+        .catch(() => {})
       caches?.keys?.()
-        .then((keys) => Promise.all(keys.filter((key) => key !== "xaviklinika-v2").map((key) => caches.delete(key))))
+        .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
         .catch(() => {})
     }
 
