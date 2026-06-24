@@ -3,15 +3,13 @@
 import { Suspense, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { supabase } from "@/lib/supabase"
 import { PLANS, type PlanCode } from "@/lib/billing"
-import { toRegisterErrorMessage } from "@/lib/userFacingErrors"
 
 const trialPlans: PlanCode[] = ["trial", "basic", "standard", "pro", "premium"]
 const planLabel = (plan: PlanCode) => plan === "trial" ? "Trial 14 Hari" : PLANS[plan].name
 
 type TrialForm = {
-  clinic_name: string
+  clinicName: string
   email: string
   password: string
   plan: PlanCode | ""
@@ -32,21 +30,23 @@ function RegisterPageInner() {
   const initialPlan = planFromUrl && trialPlans.includes(planFromUrl) ? planFromUrl : ""
 
   const [form, setForm] = useState<TrialForm>({
-    clinic_name: "",
+    clinicName: "",
     email: "",
     password: "",
     plan: initialPlan,
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
 
   const updateForm = (patch: Partial<TrialForm>) => {
     setForm((prev) => ({ ...prev, ...patch }))
     setError("")
+    setSuccess("")
   }
 
   const handleRegister = async () => {
-    if (!form.clinic_name.trim() || !form.email.trim() || !form.password) {
+    if (!form.clinicName.trim() || !form.email.trim() || !form.password) {
       setError("Nama klinik, email, dan password wajib diisi.")
       return
     }
@@ -64,11 +64,18 @@ function RegisterPageInner() {
     try {
       setLoading(true)
       setError("")
+      setSuccess("")
 
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          clinicName: form.clinicName.trim(),
+          email: form.email.trim().toLowerCase(),
+          password: form.password,
+          plan: form.plan,
+          package: form.plan,
+        }),
       })
       const data = await res.json() as { success?: boolean; error?: string; email?: string }
 
@@ -76,20 +83,11 @@ function RegisterPageInner() {
         throw new Error(data.error || "Pendaftaran belum berhasil. Mohon coba lagi.")
       }
 
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: form.email.trim().toLowerCase(),
-        password: form.password,
-      })
-
-      if (signInError) {
-        router.push(`/login?registered=1&email=${encodeURIComponent(form.email.trim().toLowerCase())}`)
-        return
-      }
-
-      router.push("/dashboard")
+      setSuccess("Akun berhasil dibuat, silakan login.")
+      router.push(`/login?registered=1&email=${encodeURIComponent(form.email.trim().toLowerCase())}`)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Terjadi kesalahan saat mendaftar."
-      setError(toRegisterErrorMessage(message))
+      setError(message)
     } finally {
       setLoading(false)
     }
@@ -124,6 +122,11 @@ function RegisterPageInner() {
                 {error}
               </div>
             )}
+            {success && (
+              <div className="mb-6 rounded-2xl border border-emerald-700/30 bg-emerald-950/30 p-4 text-sm text-emerald-300">
+                {success}
+              </div>
+            )}
 
             <div className="space-y-5">
               <div>
@@ -131,8 +134,8 @@ function RegisterPageInner() {
                 <input
                   type="text"
                   placeholder="Nama klinik"
-                  value={form.clinic_name}
-                  onChange={(e) => updateForm({ clinic_name: e.target.value })}
+                  value={form.clinicName}
+                  onChange={(e) => updateForm({ clinicName: e.target.value })}
                   onKeyDown={(e) => e.key === "Enter" && handleRegister()}
                   className="input"
                 />
