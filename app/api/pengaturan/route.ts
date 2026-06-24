@@ -13,7 +13,7 @@ export async function GET(req: Request) {
 
     const { data: clinic, error } = await supabaseAdmin
       .from("clinics")
-      .select("id, name, address, phone, email, slug, online_booking_enabled, plan, subscription_status, trial_ends_at, current_period_end")
+      .select("id, name, address, phone, email, slug, logo_url, online_booking_enabled, plan, subscription_status, trial_ends_at, current_period_end")
       .eq("id", auth.clinicId)
       .single()
 
@@ -46,7 +46,7 @@ export async function PATCH(req: Request) {
       .from("clinics")
       .update(updates)
       .eq("id", auth.clinicId)
-      .select("id, name, address, phone, email, slug, online_booking_enabled, plan, subscription_status, trial_ends_at")
+      .select("id, name, address, phone, email, slug, logo_url, online_booking_enabled, plan, subscription_status, trial_ends_at, current_period_end")
       .single()
 
     if (error) throw error
