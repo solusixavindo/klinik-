@@ -39,18 +39,23 @@ export async function POST(req: Request) {
       )
     }
 
-    if (signature_key) {
-      const expectedSignature = crypto
-        .createHash("sha512")
-        .update(`${order_id}${status_code}${gross_amount}${process.env.MIDTRANS_SERVER_KEY}`)
-        .digest("hex")
+    if (!signature_key) {
+      return NextResponse.json(
+        { success: false, error: "Signature Midtrans wajib dikirim" },
+        { status: 401 }
+      )
+    }
 
-      if (expectedSignature !== signature_key) {
-        return NextResponse.json(
-          { success: false, error: "Signature Midtrans tidak valid" },
-          { status: 401 }
-        )
-      }
+    const expectedSignature = crypto
+      .createHash("sha512")
+      .update(`${order_id}${status_code}${gross_amount}${process.env.MIDTRANS_SERVER_KEY}`)
+      .digest("hex")
+
+    if (expectedSignature !== signature_key) {
+      return NextResponse.json(
+        { success: false, error: "Signature Midtrans tidak valid" },
+        { status: 401 }
+      )
     }
 
     const { data: event, error: eventError } = await supabaseAdmin
