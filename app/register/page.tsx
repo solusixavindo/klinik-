@@ -5,8 +5,10 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { PLANS, type PlanCode } from "@/lib/billing"
+import { toRegisterErrorMessage } from "@/lib/userFacingErrors"
 
-const trialPlans: PlanCode[] = ["basic", "standard", "pro", "premium"]
+const trialPlans: PlanCode[] = ["trial", "basic", "standard", "pro", "premium"]
+const planLabel = (plan: PlanCode) => plan === "trial" ? "Trial 14 Hari" : PLANS[plan].name
 
 type TrialForm = {
   clinic_name: string
@@ -71,7 +73,7 @@ function RegisterPageInner() {
       const data = await res.json() as { success?: boolean; error?: string; email?: string }
 
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Gagal mendaftarkan klinik.")
+        throw new Error(data.error || "Pendaftaran belum berhasil. Mohon coba lagi.")
       }
 
       const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -86,7 +88,8 @@ function RegisterPageInner() {
 
       router.push("/dashboard")
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan saat mendaftar.")
+      const message = err instanceof Error ? err.message : "Terjadi kesalahan saat mendaftar."
+      setError(toRegisterErrorMessage(message))
     } finally {
       setLoading(false)
     }
@@ -170,7 +173,7 @@ function RegisterPageInner() {
                   <option value="">Pilih paket trial</option>
                   {trialPlans.map((plan) => (
                     <option key={plan} value={plan}>
-                      {PLANS[plan].name} - {PLANS[plan].priceLabel}
+                      {planLabel(plan)} - {PLANS[plan].priceLabel}
                     </option>
                   ))}
                 </select>
