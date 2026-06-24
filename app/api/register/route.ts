@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import { getTrialEndDate, isPlanCode, DEFAULT_PLAN, type PlanCode } from "@/lib/billing"
+import {
+  hasValidSupabaseServiceRoleKey,
+  serviceRoleMisconfiguredResponse,
+} from "@/lib/supabaseServiceRoleCheck"
 
 type RegisterBody = {
   clinic_name?: unknown
@@ -11,6 +15,10 @@ type RegisterBody = {
 
 export async function POST(req: Request) {
   try {
+    if (!hasValidSupabaseServiceRoleKey()) {
+      return serviceRoleMisconfiguredResponse()
+    }
+
     const body = (await req.json()) as RegisterBody
     const clinicName = typeof body.clinic_name === "string" ? body.clinic_name.trim() : ""
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : ""
@@ -32,9 +40,9 @@ export async function POST(req: Request) {
       )
     }
 
-    if (!password || password.length < 6) {
+    if (!password || password.length < 8) {
       return NextResponse.json(
-        { success: false, error: "Password minimal 6 karakter" },
+        { success: false, error: "Password minimal 8 karakter" },
         { status: 400 }
       )
     }
@@ -108,7 +116,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, email })
   } catch (err: unknown) {
     console.error("Register failed", err)
-    const message = err instanceof Error ? err.message : "Gagal mendaftarkan klinik"
+    const rawMessage = err instanceof Error ? err.message : ""
+    const message =
+      rawMessage.includes("Missing Supabase server environment variables")
+        ? "Konfigurasi Supabase server belum lengkap. Isi NEXT_PUBLIC_SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY di Vercel, lalu redeploy."
+        : rawMessage || "Gagal mendaftarkan klinik"
     return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }
