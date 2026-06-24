@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import type React from "react"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { PLANS, type PlanCode } from "@/lib/billing"
 import {
   demoInvoices,
@@ -60,7 +60,12 @@ const monthlyRevenue = [
 const formatRp = (value: number) => `Rp ${value.toLocaleString("id-ID")}`
 
 export default function DemoPage() {
-  const [plan, setPlan] = useState<PlanCode>("premium")
+  const [plan, setPlan] = useState<PlanCode>(() => {
+    if (typeof window === "undefined") return "premium"
+
+    const planFromUrl = new URLSearchParams(window.location.search).get("plan") as PlanCode | null
+    return planFromUrl && demoPlans.includes(planFromUrl) ? planFromUrl : "premium"
+  })
   const data = useMemo(() => getDemoDashboard(plan), [plan])
   const bookings = useMemo(() => getDemoBookings(), [])
   const selectedPlan = PLANS[plan]
@@ -68,13 +73,6 @@ export default function DemoPage() {
   const handleDemoAction = () => {
     alert(demoActionMessage)
   }
-
-  useEffect(() => {
-    const planFromUrl = new URLSearchParams(window.location.search).get("plan") as PlanCode | null
-    if (planFromUrl && demoPlans.includes(planFromUrl)) {
-      setPlan(planFromUrl)
-    }
-  }, [])
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-slate-100">
