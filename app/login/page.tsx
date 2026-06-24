@@ -4,9 +4,6 @@ import { useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { PLANS } from "@/lib/billing"
-import { DEMO_ACCOUNTS } from "@/lib/demoAccounts"
-import { getMatchingDemoAccount, saveDemoSession } from "@/lib/demoSession"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -21,10 +18,10 @@ export default function LoginPage() {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [success, setSuccess] = useState(() => {
+  const [success] = useState(() => {
     if (typeof window === "undefined") return ""
     return new URLSearchParams(window.location.search).get("registered")
-      ? "Akun demo sudah siap. Klik Masuk Sekarang untuk membuka dashboard paket pilihan."
+      ? "Akun berhasil dibuat. Silakan masuk untuk membuka dashboard klinik Anda."
       : ""
   })
 
@@ -43,14 +40,7 @@ export default function LoginPage() {
         password,
       })
 
-      if (signInError) {
-        const demoAccount = getMatchingDemoAccount(email, password)
-        if (!demoAccount) throw signInError
-
-        saveDemoSession(demoAccount)
-        router.push("/dashboard")
-        return
-      }
+      if (signInError) throw signInError
 
       router.push("/dashboard")
     } catch (err: unknown) {
@@ -67,13 +57,6 @@ export default function LoginPage() {
     }
   }
 
-  const fillDemo = (account: (typeof DEMO_ACCOUNTS)[number]) => {
-    setEmail(account.email)
-    setPassword(account.password)
-    setError("")
-    setSuccess(`Login demo Paket ${PLANS[account.plan].name} siap digunakan.`)
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 px-4 py-8">
       {/* Background Decoration */}
@@ -82,7 +65,7 @@ export default function LoginPage() {
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl"></div>
       </div>
 
-      <div className="relative mx-auto grid w-full max-w-5xl gap-6 lg:grid-cols-[420px_1fr] lg:items-start">
+      <div className="relative mx-auto grid w-full max-w-3xl gap-6">
         {/* Card */}
         <div className="rounded-3xl border border-slate-700/30 bg-gradient-to-b from-slate-800/50 to-slate-900/50 backdrop-blur-xl p-8 shadow-2xl">
           {/* Logo */}
@@ -177,29 +160,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <section className="rounded-3xl border border-slate-700/30 bg-gradient-to-b from-slate-800/50 to-slate-900/50 p-6 shadow-2xl backdrop-blur-xl lg:p-8">
-          <p className="text-xs font-bold uppercase tracking-widest text-indigo-400">Akun Demo Cepat</p>
-          <h2 className="mt-3 text-2xl font-bold text-white">Masuk sesuai paket penawaran</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-400">
-            Pilih salah satu akun berikut untuk mengisi form login otomatis. Dashboard akan menampilkan menu sesuai fitur paket.
-          </p>
-
-          <div className="mt-6 grid gap-3 md:grid-cols-2">
-            {DEMO_ACCOUNTS.map((account) => (
-              <button
-                key={account.email}
-                type="button"
-                onClick={() => fillDemo(account)}
-                className="rounded-2xl border border-slate-700/30 bg-slate-900/30 p-4 text-left transition hover:border-indigo-500/40 hover:bg-slate-800/40"
-              >
-                <p className="text-xs font-bold uppercase tracking-widest text-indigo-300">Paket {PLANS[account.plan].name}</p>
-                <h3 className="mt-2 text-lg font-bold text-white">{account.clinicName}</h3>
-                <p className="mt-2 text-sm text-slate-400">{account.email}</p>
-                <p className="mt-1 text-sm text-slate-500">{account.password}</p>
-              </button>
-            ))}
-          </div>
-        </section>
       </div>
     </div>
   )
