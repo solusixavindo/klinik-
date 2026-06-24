@@ -1,6 +1,7 @@
 import type { User } from "@supabase/supabase-js"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import type { UserRole } from "@/lib/roleAccess"
+import { hasValidSupabaseServiceRoleKey } from "@/lib/supabaseServiceRoleCheck"
 
 export type ClinicAuth =
   | { clinicId: string; user: User; role: UserRole }
@@ -8,6 +9,14 @@ export type ClinicAuth =
 
 /** Resolve clinic_id from Bearer JWT (same pattern as /api/bookings). */
 export async function getClinicFromRequest(req: Request): Promise<ClinicAuth> {
+  if (!hasValidSupabaseServiceRoleKey()) {
+    return {
+      error:
+        "Konfigurasi Supabase server belum lengkap. Isi NEXT_PUBLIC_SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY di Vercel, lalu redeploy.",
+      status: 503,
+    }
+  }
+
   const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "")
 
   if (!token) {
