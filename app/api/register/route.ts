@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import { getTrialEndDate, isPlanCode, DEFAULT_PLAN, type PlanCode } from "@/lib/billing"
+import { friendlySupabaseSetupMessage } from "@/lib/supabaseEnv"
 import {
   hasValidSupabaseServiceRoleKey,
   serviceRoleMisconfiguredResponse,
@@ -11,6 +12,97 @@ type RegisterBody = {
   email?: unknown
   password?: unknown
   plan?: unknown
+}
+
+type ClinicInsertResult = {
+  id: string
+}
+
+const missingColumn = (message?: string) =>
+  Boolean(message && /column .* does not exist|could not find .* column|schema cache/i.test(message))
+
+async function createClinic(clinicName: string, email: string, plan: PlanCode): Promise<ClinicInsertResult> {
+  const now = new Date().toISOString()
+  const trialEnd = getTrialEndDate()
+  const payloads: Record<string, unknown>[] = [
+    {
+      name: clinicName,
+      plan,
+      package: plan,
+      trial_plan: plan,
+      subscription_status: "trialing",
+      trial_start: now,
+      trial_end: trialEnd,
+      trial_ends_at: trialEnd,
+      billing_email: email,
+      updated_at: now,
+    },
+    {
+      name: clinicName,
+      plan,
+      subscription_status: "trialing",
+      trial_ends_at: trialEnd,
+      billing_email: email,
+      updated_at: now,
+    },
+    {
+      name: clinicName,
+      plan,
+      subscription_status: "trialing",
+      trial_ends_at: trialEnd,
+      updated_at: now,
+    },
+    { name: clinicName },
+  ]
+
+  let lastError: Error | null = null
+
+  for (const payload of payloads) {
+    const { data, error } = await supabaseAdmin
+      .from("clinics")
+      .insert([payload])
+      .select("id")
+      .single()
+
+    if (!error && data?.id) return data as ClinicInsertResult
+    if (!missingColumn(error?.message)) throw error
+    lastError = error
+  }
+
+  throw lastError || new Error("Gagal membuat data klinik")
+}
+
+async function createProfile(userId: string, clinicId: string, email: string) {
+  const payloads = [
+    { id: userId, clinic_id: clinicId, role: "admin", email },
+    { id: userId, clinic_id: clinicId, role: "admin" },
+  ]
+
+  let lastError: Error | null = null
+
+  for (const payload of payloads) {
+    const { error } = await supabaseAdmin.from("profiles").insert([payload])
+    if (!error) return
+    if (!missingColumn(error.message)) throw error
+    lastError = error
+  }
+
+  throw lastError || new Error("Gagal membuat profil admin")
+}
+
+async function recordTrialEvent(clinicId: string, plan: PlanCode, email: string) {
+  const { error } = await supabaseAdmin.from("subscription_events").insert([
+    {
+      clinic_id: clinicId,
+      event_type: "trial_started",
+      provider: "xaviklinika",
+      metadata: { plan, email, days: 14 },
+    },
+  ])
+
+  if (error && !/relation .* does not exist|schema cache/i.test(error.message)) {
+    console.warn("Register trial event skipped", error.message)
+  }
 }
 
 export async function POST(req: Request) {
@@ -75,43 +167,22 @@ export async function POST(req: Request) {
 
     const user = userData.user
 
-    // Buat klinik
-    const { data: clinic, error: clinicError } = await supabaseAdmin
-      .from("clinics")
-      .insert([
-        {
-          name: clinicName,
-          plan,
-          subscription_status: "trialing",
-          trial_ends_at: getTrialEndDate(),
-          billing_email: email,
-          updated_at: new Date().toISOString(),
-        },
-      ])
-      .select("id")
-      .single()
+    const clinic = await createClinic(clinicName, email, plan)
 
-    if (clinicError || !clinic) {
+    if (!clinic) {
       // Hapus user kalau klinik gagal dibuat
       await supabaseAdmin.auth.admin.deleteUser(user.id)
-      throw clinicError || new Error("Gagal membuat data klinik")
+      throw new Error("Gagal membuat data klinik")
     }
 
-    // Buat profil
-    const { error: profileError } = await supabaseAdmin
-      .from("profiles")
-      .insert([
-        {
-          id: user.id,
-          clinic_id: clinic.id,
-          role: "admin",
-        },
-      ])
-
-    if (profileError) {
+    try {
+      await createProfile(user.id, clinic.id, email)
+    } catch (profileError) {
       await supabaseAdmin.auth.admin.deleteUser(user.id)
       throw profileError
     }
+
+    await recordTrialEvent(clinic.id, plan, email)
 
     return NextResponse.json({ success: true, email })
   } catch (err: unknown) {
@@ -119,8 +190,8 @@ export async function POST(req: Request) {
     const rawMessage = err instanceof Error ? err.message : ""
     const message =
       rawMessage.includes("Missing Supabase server environment variables")
-        ? "Konfigurasi Supabase server belum lengkap. Isi NEXT_PUBLIC_SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY di Vercel, lalu redeploy."
-        : rawMessage || "Gagal mendaftarkan klinik"
+        ? friendlySupabaseSetupMessage
+        : rawMessage || "Pendaftaran belum berhasil. Mohon coba lagi."
     return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }
