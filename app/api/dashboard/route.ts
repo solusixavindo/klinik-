@@ -142,7 +142,7 @@ export async function GET(req: Request) {
         .from("queue_entries")
         .select("id, status, patients(name), doctors(name)")
         .eq("clinic_id", clinicId)
-        .eq("date", today)
+        .eq("queue_date", today)
         .in("status", ["waiting", "called", "serving"]),
     ])
 
