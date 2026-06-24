@@ -4,6 +4,7 @@ import { Suspense, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { PLANS, type PlanCode } from "@/lib/billing"
+import { toRegisterErrorMessage } from "@/lib/userFacingErrors"
 
 const trialPlans: PlanCode[] = ["trial", "basic", "standard", "pro", "premium"]
 const planLabel = (plan: PlanCode) => plan === "trial" ? "Trial 14 Hari" : PLANS[plan].name
@@ -87,7 +88,7 @@ function RegisterPageInner() {
       router.push(`/login?registered=1&email=${encodeURIComponent(form.email.trim().toLowerCase())}`)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Terjadi kesalahan saat mendaftar."
-      setError(message)
+      setError(toRegisterErrorMessage(message))
     } finally {
       setLoading(false)
     }
