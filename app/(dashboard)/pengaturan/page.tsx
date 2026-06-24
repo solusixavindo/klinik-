@@ -1,11 +1,10 @@
+/* eslint-disable @next/next/no-img-element */
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { getPlan } from "@/lib/billing"
-import { getDemoSession } from "@/lib/demoSession"
-import { getDemoClinicSettings } from "@/lib/demoData"
 
 type ClinicSettings = {
   id: string
@@ -14,6 +13,7 @@ type ClinicSettings = {
   phone: string | null
   email: string | null
   slug: string | null
+  logo_url: string | null
   online_booking_enabled: boolean
   plan: string
   subscription_status: string
@@ -28,6 +28,9 @@ export default function PengaturanPage() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [form, setForm] = useState({ name: "", address: "", phone: "", email: "" })
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [logoPreview, setLogoPreview] = useState("")
+  const [uploadingLogo, setUploadingLogo] = useState(false)
 
   const getToken = async () => (await supabase.auth.getSession()).data.session?.access_token
 
@@ -35,19 +38,6 @@ export default function PengaturanPage() {
     setLoading(true)
     setError("")
     try {
-      const demoSession = getDemoSession()
-      if (demoSession) {
-        const demoClinic = getDemoClinicSettings(demoSession)
-        setClinic(demoClinic)
-        setForm({
-          name: demoClinic.name,
-          address: demoClinic.address ?? "",
-          phone: demoClinic.phone ?? "",
-          email: demoClinic.email ?? "",
-        })
-        return
-      }
-
       const token = await getToken()
       const res = await fetch("/api/pengaturan", { headers: { Authorization: `Bearer ${token}` } })
       const data = await res.json()
@@ -59,6 +49,7 @@ export default function PengaturanPage() {
         phone: data.clinic.phone ?? "",
         email: data.clinic.email ?? "",
       })
+      setLogoPreview(data.clinic.logo_url ?? "")
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Gagal memuat pengaturan")
     } finally {
@@ -74,12 +65,6 @@ export default function PengaturanPage() {
     setError("")
     setSuccess("")
     try {
-      if (getDemoSession()) {
-        setClinic((current) => current ? { ...current, ...form } : current)
-        setSuccess("Mode demo: perubahan pengaturan disimulasikan dan tidak disimpan ke Supabase.")
-        return
-      }
-
       const token = await getToken()
       const res = await fetch("/api/pengaturan", {
         method: "PATCH",
@@ -94,6 +79,65 @@ export default function PengaturanPage() {
       setError(err instanceof Error ? err.message : "Gagal menyimpan pengaturan")
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleLogoChange = (file?: File) => {
+    setError("")
+    setSuccess("")
+    if (!file) {
+      setLogoFile(null)
+      setLogoPreview(clinic?.logo_url ?? "")
+      return
+    }
+
+    const allowed = ["image/png", "image/jpeg", "image/webp"]
+    if (!allowed.includes(file.type)) {
+      setError("Format logo harus png, jpg, jpeg, atau webp.")
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setError("Ukuran logo maksimal 2MB.")
+      return
+    }
+
+    setLogoFile(file)
+    setLogoPreview(URL.createObjectURL(file))
+  }
+
+  const handleUploadLogo = async () => {
+    if (!logoFile) {
+      setError("Pilih file logo terlebih dahulu.")
+      return
+    }
+
+    setUploadingLogo(true)
+    setError("")
+    setSuccess("")
+
+    try {
+      const token = await getToken()
+      if (!token) throw new Error("Sesi login tidak valid. Silakan login ulang.")
+
+      const body = new FormData()
+      body.append("logo", logoFile)
+
+      const res = await fetch("/api/clinic-logo", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body,
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.error || "Gagal upload logo")
+
+      setClinic((current) => current ? { ...current, logo_url: data.clinic.logo_url } : current)
+      setLogoPreview(data.clinic.logo_url)
+      setLogoFile(null)
+      setSuccess("Logo klinik berhasil diperbarui.")
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Gagal upload logo klinik")
+    } finally {
+      setUploadingLogo(false)
     }
   }
 
@@ -119,9 +163,34 @@ export default function PengaturanPage() {
         <div className="flex h-32 items-center justify-center text-slate-400 text-sm">Memuat pengaturan...</div>
       ) : (
         <>
-          {/* Form Pengaturan Dasar */}
           <div className="rounded-3xl border border-slate-700/20 bg-gradient-to-br from-slate-800/30 to-slate-900/20 p-6 space-y-4">
             <h2 className="font-semibold text-white">Informasi Klinik</h2>
+            <div className="flex flex-col gap-4 rounded-2xl border border-slate-700/20 bg-slate-900/30 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-4">
+                {logoPreview ? (
+                  <img src={logoPreview} alt={form.name || "Logo klinik"} className="h-20 w-20 rounded-2xl border border-slate-700/40 object-cover" />
+                ) : (
+                  <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 text-2xl font-bold text-white">
+                    {(form.name || "K").trim().slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+                <div>
+                  <p className="text-sm font-semibold text-white">Logo Klinik</p>
+                  <p className="mt-1 text-xs text-slate-400">PNG, JPG, JPEG, atau WEBP. Maksimal 2MB.</p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2 sm:items-end">
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(e) => handleLogoChange(e.target.files?.[0])}
+                  className="block w-full text-sm text-slate-300 file:mr-3 file:rounded-xl file:border-0 file:bg-indigo-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+                />
+                <button onClick={handleUploadLogo} disabled={uploadingLogo || !logoFile} className="btn-secondary text-sm">
+                  {uploadingLogo ? "Mengupload..." : "Upload Logo"}
+                </button>
+              </div>
+            </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="label">Nama Klinik <span className="text-red-400">*</span></label>
@@ -155,7 +224,6 @@ export default function PengaturanPage() {
             </div>
           </div>
 
-          {/* Info Plan */}
           {planInfo && clinic && (
             <div className="rounded-3xl border border-slate-700/20 bg-gradient-to-br from-slate-800/30 to-slate-900/20 p-6 space-y-3">
               <h2 className="font-semibold text-white">Paket Saat Ini</h2>
@@ -180,7 +248,6 @@ export default function PengaturanPage() {
             </div>
           )}
 
-          {/* Sub-halaman */}
           <div className="rounded-3xl border border-slate-700/20 bg-gradient-to-br from-slate-800/30 to-slate-900/20 p-6 space-y-3">
             <h2 className="font-semibold text-white">Pengaturan Lanjutan</h2>
             <div className="grid gap-3 sm:grid-cols-2">
