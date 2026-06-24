@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
-import { getTrialEndDate, isPlanCode, DEFAULT_PLAN, type PlanCode } from "@/lib/billing"
-import { getSupabaseEnvStatus } from "@/lib/supabaseEnv"
-import { hasValidSupabaseServiceRoleKey } from "@/lib/supabaseServiceRoleCheck"
+import { getTrialEndDate, isPlanCode, type PlanCode } from "@/lib/billing"
+import { friendlySupabaseSetupMessage, getSupabaseEnvCheck, type SupabaseEnvCheck } from "@/lib/supabaseEnv"
 
 type RegisterBody = {
   clinic_name?: unknown
@@ -20,9 +19,9 @@ type ClinicInsertResult = {
 const missingColumn = (message?: string) =>
   Boolean(message && /column .* does not exist|could not find .* column|schema cache/i.test(message))
 
-const logRegisterError = (step: string, error: unknown) => {
+const logRegisterError = (step: string, error: unknown, envCheck?: SupabaseEnvCheck) => {
   const message = error instanceof Error ? error.message : String(error)
-  console.error("REGISTER_ERROR", { step, message })
+  console.error("REGISTER_ERROR", { step, reason: message, ...(envCheck ? { envCheck } : {}) })
 }
 
 const errorResponse = (error: string, status = 500, code?: string) =>
@@ -145,17 +144,21 @@ async function recordTrialEvent(clinicId: string, plan: PlanCode, email: string)
 export async function POST(req: Request) {
   let step = "init"
   let createdUserId: string | null = null
+  let envCheck: SupabaseEnvCheck | undefined
 
   try {
-    if (!hasValidSupabaseServiceRoleKey()) {
-      const env = getSupabaseEnvStatus()
-      const missing = Object.entries(env)
-        .filter(([, ok]) => !ok)
-        .map(([key]) => key)
-      return errorResponse(
-        `ENV Supabase belum lengkap atau service role key salah: ${missing.join(", ") || "SUPABASE_SERVICE_ROLE_KEY"}.`,
-        503,
-        "SUPABASE_ENV_MISSING"
+    step = "validate_env"
+    envCheck = getSupabaseEnvCheck()
+    if (!envCheck.ready) {
+      logRegisterError(step, new Error(envCheck.reason || "Supabase env belum siap"), envCheck)
+      return NextResponse.json(
+        {
+          success: false,
+          error: friendlySupabaseSetupMessage,
+          code: "SUPABASE_ENV_NOT_READY",
+          reason: envCheck.reason,
+        },
+        { status: 503 }
       )
     }
 
@@ -175,8 +178,8 @@ export async function POST(req: Request) {
         ? body.plan
         : typeof body.package === "string"
           ? body.package
-          : DEFAULT_PLAN
-    const plan: PlanCode = isPlanCode(planRaw) ? planRaw : DEFAULT_PLAN
+          : ""
+    const plan: PlanCode | null = isPlanCode(planRaw) ? planRaw : null
 
     if (!clinicName || clinicName.length < 3) {
       return NextResponse.json(
@@ -195,6 +198,13 @@ export async function POST(req: Request) {
     if (!password || password.length < 8) {
       return NextResponse.json(
         { success: false, error: "Password minimal 8 karakter" },
+        { status: 400 }
+      )
+    }
+
+    if (!plan) {
+      return NextResponse.json(
+        { success: false, error: "Pilih paket trial yang valid" },
         { status: 400 }
       )
     }
@@ -235,9 +245,9 @@ export async function POST(req: Request) {
     step = "record_trial"
     await recordTrialEvent(clinic.id, plan, email)
 
-    return NextResponse.json({ success: true, email })
+    return NextResponse.json({ success: true, email, redirectTo: "/login?registered=1" })
   } catch (err: unknown) {
-    logRegisterError(step, err)
+    logRegisterError(step, err, envCheck)
     if (createdUserId && step !== "record_trial") {
       await supabaseAdmin.auth.admin.deleteUser(createdUserId).catch((cleanupError) => {
         logRegisterError("cleanup_auth_user", cleanupError)
