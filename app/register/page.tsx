@@ -104,16 +104,16 @@ function RegisterPageInner() {
           <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 text-2xl font-bold text-white shadow-lg shadow-indigo-600/20">
             X
           </div>
-          <h1 className="text-3xl font-bold text-white">Mulai Free Trial 14 Hari</h1>
-          <p className="mt-2 text-slate-400">Buat workspace klinik real. Dashboard awal kosong dan siap diisi data klinik Anda.</p>
+          <h1 className="text-3xl font-bold text-white">Mulai Trial Gratis 14 Hari</h1>
+          <p className="mt-2 text-slate-400">Buat akun klinik Anda dan mulai kelola operasional secara digital.</p>
         </header>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,480px)_1fr] lg:items-start">
           <section className="rounded-3xl border border-slate-700/30 bg-gradient-to-b from-slate-800/50 to-slate-900/50 p-8 shadow-2xl backdrop-blur-xl">
             <div className="mb-6">
-              <p className="text-xs font-bold uppercase tracking-widest text-indigo-300">Free Trial Real</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-indigo-300">Trial Gratis</p>
               <h2 className="mt-2 text-2xl font-bold text-white">Daftarkan klinik Anda</h2>
-              <p className="mt-2 text-sm text-slate-400">Tidak perlu kartu kredit. Data trial tersimpan aman per klinik.</p>
+              <p className="mt-2 text-sm text-slate-400">Tidak perlu kartu kredit. Setup cepat untuk mulai operasional digital.</p>
             </div>
 
             {error && (
@@ -189,7 +189,7 @@ function RegisterPageInner() {
                   Menyiapkan trial...
                 </span>
               ) : (
-                "Mulai Free Trial 14 Hari"
+                "Mulai Trial Gratis 14 Hari"
               )}
             </button>
 
@@ -202,20 +202,20 @@ function RegisterPageInner() {
           </section>
 
           <aside className="rounded-3xl border border-slate-700/30 bg-slate-900/45 p-8 shadow-2xl backdrop-blur-xl">
-            <p className="text-xs font-bold uppercase tracking-widest text-indigo-300">Trial Production</p>
-            <h2 className="mt-2 text-2xl font-bold text-white">Akun real, data awal kosong</h2>
+            <p className="text-xs font-bold uppercase tracking-widest text-indigo-300">Mulai Lebih Rapi</p>
+            <h2 className="mt-2 text-2xl font-bold text-white">Trial siap untuk operasional klinik Anda</h2>
             <div className="mt-6 space-y-4 text-sm text-slate-300">
-              <p><span className="text-emerald-400">✓</span> Klinik baru dibuat dengan `clinic_id` tenant sendiri.</p>
-              <p><span className="text-emerald-400">✓</span> Admin user dan profile dibuat di Supabase production.</p>
-              <p><span className="text-emerald-400">✓</span> Dashboard awal tidak berisi data dummy.</p>
-              <p><span className="text-emerald-400">✓</span> Paket trial tersimpan sesuai pilihan Anda.</p>
+              <p><span className="text-emerald-400">✓</span> Dashboard siap digunakan untuk klinik Anda</p>
+              <p><span className="text-emerald-400">✓</span> Data klinik tersimpan secara terpisah dan aman</p>
+              <p><span className="text-emerald-400">✓</span> Pilih paket sesuai kebutuhan operasional</p>
+              <p><span className="text-emerald-400">✓</span> Bisa upgrade kapan saja setelah trial</p>
             </div>
 
             <div className="mt-8 rounded-2xl border border-indigo-500/20 bg-indigo-500/10 p-5">
-              <p className="font-semibold text-indigo-100">Ingin lihat fitur dulu?</p>
-              <p className="mt-2 text-sm text-slate-400">Gunakan halaman demo terpisah berisi data simulasi tanpa menyentuh database production.</p>
+              <p className="font-semibold text-indigo-100">Ingin lihat fitur terlebih dahulu?</p>
+              <p className="mt-2 text-sm text-slate-400">Jelajahi tampilan dashboard lengkap sebelum membuat akun trial.</p>
               <Link href="/demo" className="btn-secondary mt-4 w-full">
-                Coba Demo
+                Coba Demo Interaktif
               </Link>
             </div>
           </aside>
