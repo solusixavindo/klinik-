@@ -57,6 +57,44 @@ const monthlyRevenue = [
   { label: "Agu", value: 96 },
 ]
 
+const ownerMetrics = [
+  { label: "Pendapatan Hari Ini", value: "Rp 12,6jt", note: "32 transaksi tercatat", tone: "text-emerald-300" },
+  { label: "Pendapatan Bulan Ini", value: "Rp 86,5jt", note: "+16% dibanding bulan lalu", tone: "text-indigo-300" },
+  { label: "Invoice Outstanding", value: "Rp 18,4jt", note: "27 invoice perlu follow up", tone: "text-amber-300" },
+  { label: "Staff Aktif Hari Ini", value: "18 orang", note: "4 poli dan kasir aktif", tone: "text-cyan-300" },
+]
+
+const topServices = [
+  { label: "Konsultasi Umum", value: "126 kunjungan", amount: 18900000 },
+  { label: "Pemeriksaan Gigi", value: "84 tindakan", amount: 25200000 },
+  { label: "Imunisasi Anak", value: "51 kunjungan", amount: 15300000 },
+  { label: "Paket Medical Check Up", value: "28 paket", amount: 19600000 },
+]
+
+const topDoctors = [
+  { label: "dr. Maya Putri", value: "46 pasien", amount: 6900000 },
+  { label: "drg. Raka Aditya", value: "31 pasien", amount: 6975000 },
+  { label: "dr. Lina Kartika", value: "28 pasien", amount: 4900000 },
+]
+
+const operationsSnapshot = [
+  { label: "Booking Hari Ini", value: "32", note: "24 selesai, 8 berjalan" },
+  { label: "Antrian Aktif", value: "8", note: "5 menunggu, 2 dipanggil, 1 dilayani" },
+  { label: "Pasien Menunggu", value: "5", note: "Estimasi antrean 18 menit" },
+]
+
+const pharmacyAlerts = [
+  { label: "Amoxicillin 500mg", value: "28 kapsul", tag: "Hampir habis" },
+  { label: "Alkohol Swab", value: "18 box", tag: "Restock" },
+  { label: "Vitamin D3 1000 IU", value: "Expired 12 hari", tag: "Expired" },
+]
+
+const labQueue = [
+  { label: "Darah Lengkap", value: "6 hasil menunggu", tag: "Prioritas" },
+  { label: "Gula Darah", value: "4 hasil diproses", tag: "Normal" },
+  { label: "Radiologi Thorax", value: "2 hasil review", tag: "Review" },
+]
+
 const formatRp = (value: number) => `Rp ${value.toLocaleString("id-ID")}`
 
 export default function DemoPage() {
@@ -165,6 +203,38 @@ export default function DemoPage() {
             <StatCard label="Invoice Terbayar" value="184" note={formatRp(42600000)} tone="text-fuchsia-300" />
           </div>
 
+          <div className="mt-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+            <Panel title="Owner Dashboard" action={<button onClick={handleDemoAction} className="text-xs font-semibold text-indigo-300">Lihat Laporan</button>}>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {ownerMetrics.map((item) => (
+                  <div key={item.label} className="rounded-2xl border border-slate-700/20 bg-slate-950/30 p-4">
+                    <p className="text-xs font-semibold text-slate-400">{item.label}</p>
+                    <p className={`mt-2 text-xl font-bold ${item.tone}`}>{item.value}</p>
+                    <p className="mt-1 text-xs text-slate-500">{item.note}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                <MiniRanking title="Top Layanan" items={topServices} />
+                <MiniRanking title="Top Dokter" items={topDoctors} />
+              </div>
+            </Panel>
+
+            <Panel title="Operasional Hari Ini" action={<button onClick={handleDemoAction} className="text-xs font-semibold text-indigo-300">Pantau Live</button>}>
+              <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+                {operationsSnapshot.map((item) => (
+                  <div key={item.label} className="rounded-2xl border border-slate-700/20 bg-slate-950/30 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-slate-300">{item.label}</p>
+                      <p className="text-2xl font-bold text-white">{item.value}</p>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">{item.note}</p>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+          </div>
+
           <div className="mt-6 grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
             <Panel title="Revenue & Kunjungan" action={<button onClick={handleDemoAction} className="text-xs font-semibold text-indigo-300">Export</button>}>
               <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
@@ -250,6 +320,32 @@ export default function DemoPage() {
                     meta={`${schedule.day}, ${schedule.start_time}-${schedule.end_time}`}
                     tag={schedule.doctors.specialization}
                   />
+                ))}
+              </div>
+            </Panel>
+          </div>
+
+          <div className="mt-6 grid gap-6 xl:grid-cols-3">
+            <Panel title="Keuangan" action={<button onClick={handleDemoAction} className="text-xs font-semibold text-indigo-300">Export Laporan</button>}>
+              <div className="space-y-3">
+                <Row title="Invoice Terbayar" meta="184 invoice bulan ini" tag={formatRp(42600000)} />
+                <Row title="Invoice Outstanding" meta="27 invoice perlu follow up" tag={formatRp(18400000)} />
+                <Row title="Estimasi Cashflow" meta="Target akhir bulan" tag={formatRp(118000000)} />
+              </div>
+            </Panel>
+
+            <Panel title="Apotek" action={<button onClick={handleDemoAction} className="text-xs font-semibold text-indigo-300">Buat Restock</button>}>
+              <div className="space-y-3">
+                {pharmacyAlerts.map((item) => (
+                  <Row key={item.label} title={item.label} meta={item.value} tag={item.tag} />
+                ))}
+              </div>
+            </Panel>
+
+            <Panel title="Laboratorium" action={<button onClick={handleDemoAction} className="text-xs font-semibold text-indigo-300">Update Hasil</button>}>
+              <div className="space-y-3">
+                {labQueue.map((item) => (
+                  <Row key={item.label} title={item.label} meta={item.value} tag={item.tag} />
                 ))}
               </div>
             </Panel>
@@ -375,6 +471,25 @@ function QueueMetric({ label, value }: { label: string; value: number }) {
     <div className="rounded-2xl border border-slate-700/20 bg-slate-950/30 p-3 text-center">
       <p className="text-xs text-slate-400">{label}</p>
       <p className="mt-1 text-2xl font-bold text-white">{value}</p>
+    </div>
+  )
+}
+
+function MiniRanking({ title, items }: { title: string; items: { label: string; value: string; amount: number }[] }) {
+  return (
+    <div className="rounded-2xl border border-slate-700/20 bg-slate-950/30 p-4">
+      <p className="mb-3 text-sm font-bold text-white">{title}</p>
+      <div className="space-y-3">
+        {items.map((item, index) => (
+          <div key={item.label} className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-slate-200">{index + 1}. {item.label}</p>
+              <p className="text-xs text-slate-500">{item.value}</p>
+            </div>
+            <span className="shrink-0 text-xs font-bold text-emerald-300">{formatRp(item.amount)}</span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
