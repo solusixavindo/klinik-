@@ -1,5 +1,6 @@
 import { Buffer } from "node:buffer"
 import { NextResponse } from "next/server"
+import { friendlySupabaseSetupMessage } from "@/lib/supabaseEnv"
 
 export function getJwtRoleFromSupabaseKey(key: string): string | undefined {
   try {
@@ -33,8 +34,7 @@ export function serviceRoleMisconfiguredResponse(): NextResponse {
     {
       success: false,
       code: "SUPABASE_SERVICE_ROLE_INVALID",
-      error:
-        "Konfigurasi Supabase belum benar. Isi NEXT_PUBLIC_SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY di Vercel dengan Project URL dan secret service_role key dari project Supabase yang sama, lalu redeploy.",
+      error: friendlySupabaseSetupMessage,
     },
     { status: 503 }
   )
