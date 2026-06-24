@@ -130,6 +130,7 @@ export async function PATCH(req: Request) {
       .from("profiles")
       .update({ role: role as UserRole })
       .eq("id", id)
+      .eq("clinic_id", auth.clinicId)
 
     if (error) throw error
 
@@ -174,7 +175,11 @@ export async function DELETE(req: Request) {
     }
 
     // Hapus profile lalu user
-    const { error: profileError } = await supabaseAdmin.from("profiles").delete().eq("id", id)
+    const { error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .delete()
+      .eq("id", id)
+      .eq("clinic_id", auth.clinicId)
     if (profileError) throw profileError
 
     const { error: userError } = await supabaseAdmin.auth.admin.deleteUser(id)
