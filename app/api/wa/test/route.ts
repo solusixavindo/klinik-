@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { getClinicFromRequest } from "@/lib/getClinicFromRequest"
 import { sendWhatsApp, WA_TEMPLATES } from "@/lib/whatsapp"
 
 const DUMMY_PARAMS = {
@@ -26,6 +27,14 @@ const DUMMY_PARAMS = {
 
 export async function POST(req: Request) {
   try {
+    const auth = await getClinicFromRequest(req)
+    if (!("clinicId" in auth)) {
+      return NextResponse.json(
+        { success: false, error: auth.error },
+        { status: auth.status }
+      )
+    }
+
     const body = await req.json() as { phone?: string; template?: string }
     const { phone, template } = body
 
