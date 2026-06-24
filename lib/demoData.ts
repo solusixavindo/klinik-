@@ -168,6 +168,19 @@ export const demoSchedules = [
   },
 ]
 
+export const demoStockItems = [
+  { id: "demo-stock-1", name: "Paracetamol 500mg", category: "Obat Umum", stock: 124, min_stock: 40, unit: "tablet", sell_price: 3500 },
+  { id: "demo-stock-2", name: "Amoxicillin 500mg", category: "Antibiotik", stock: 28, min_stock: 30, unit: "kapsul", sell_price: 8500 },
+  { id: "demo-stock-3", name: "Masker Medis", category: "Alkes", stock: 240, min_stock: 80, unit: "pcs", sell_price: 1500 },
+  { id: "demo-stock-4", name: "Alkohol Swab", category: "Alkes", stock: 18, min_stock: 50, unit: "box", sell_price: 25000 },
+]
+
+export const demoInvoices = [
+  { id: "INV-DEMO-001", patient_name: "Ahmad Santoso", amount: 150000, status: "paid", date: new Date().toISOString().slice(0, 10) },
+  { id: "INV-DEMO-002", patient_name: "Siti Rahma", amount: 225000, status: "pending", date: new Date().toISOString().slice(0, 10) },
+  { id: "INV-DEMO-003", patient_name: "Budi Hartono", amount: 175000, status: "partial", date: new Date().toISOString().slice(0, 10) },
+]
+
 export const getDemoDashboard = (planCode: PlanCode) => {
   const bookings = getDemoBookings()
   const weekly_visits = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map((label, index) => ({
@@ -204,6 +217,8 @@ export const getDemoDashboard = (planCode: PlanCode) => {
       { id: "demo-queue-2", status: "called", patients: { name: "Siti Rahma" }, doctors: { name: "drg. Raka Aditya" } },
       { id: "demo-queue-3", status: "serving", patients: { name: "Budi Hartono" }, doctors: { name: "dr. Lina Kartika" } },
     ],
+    stock_items: demoStockItems,
+    invoices: demoInvoices,
     low_stock_count: planCode === "basic" || planCode === "standard" ? 0 : 3,
     recurring_due_count: planCode === "basic" ? 0 : 2,
   }
