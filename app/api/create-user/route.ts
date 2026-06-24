@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import { DEFAULT_PLAN, getTrialEndDate, isPlanCode } from "@/lib/billing"
+import {
+  hasValidSupabaseServiceRoleKey,
+  serviceRoleMisconfiguredResponse,
+} from "@/lib/supabaseServiceRoleCheck"
 
 export async function POST(req: Request) {
   try {
+    if (!hasValidSupabaseServiceRoleKey()) {
+      return serviceRoleMisconfiguredResponse()
+    }
+
     const { user_id, clinic_name, plan } = await req.json()
 
     if (!user_id || !clinic_name) {
@@ -58,7 +66,11 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true })
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Terjadi kesalahan"
+    const rawMessage = err instanceof Error ? err.message : ""
+    const message =
+      rawMessage.includes("Missing Supabase server environment variables")
+        ? "Konfigurasi Supabase server belum lengkap. Isi NEXT_PUBLIC_SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY di Vercel, lalu redeploy."
+        : rawMessage || "Terjadi kesalahan"
     return NextResponse.json(
       { success: false, error: message },
       { status: 500 }
