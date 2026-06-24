@@ -51,6 +51,22 @@ export async function POST(req: Request) {
       error_message?: string
     }
 
+    if (booking_id) {
+      const { data: booking, error: bookingError } = await supabaseAdmin
+        .from("bookings")
+        .select("id")
+        .eq("id", booking_id)
+        .eq("clinic_id", auth.clinicId)
+        .maybeSingle()
+
+      if (bookingError || !booking) {
+        return NextResponse.json(
+          { success: false, error: "Booking tidak ditemukan di klinik ini" },
+          { status: 404 }
+        )
+      }
+    }
+
     const { data, error } = await supabaseAdmin
       .from("reminder_logs")
       .insert({
