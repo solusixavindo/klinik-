@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
-import * as midtransClient from "midtrans-client"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
-import { getNextBillingDate, getPlan, PlanCode } from "@/lib/billing"
+import { getPlan, PlanCode } from "@/lib/billing"
+import { createXenditInvoice, getPublicAppUrl, hasXenditEnv } from "@/lib/xendit"
 
 type CheckoutRequest = {
   plan?: unknown
@@ -70,47 +70,27 @@ export async function POST(req: Request) {
     }
 
     const plan = getPlan(planCode)
-    const midtransClientKey = process.env.MIDTRANS_CLIENT_KEY || process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY
-    const demoFallback = !process.env.MIDTRANS_SERVER_KEY || !midtransClientKey
 
-    if (demoFallback) {
-      await supabaseAdmin.from("clinics").update({
-        plan: plan.code,
-        subscription_status: "active",
-        current_period_end: getNextBillingDate(),
-        updated_at: new Date().toISOString(),
-      }).eq("id", clinic.id)
-
-      await supabaseAdmin.from("subscription_events").insert([
-        {
-          clinic_id: clinic.id,
-          event_type: "checkout_demo_activated",
-          provider: "demo",
-          provider_reference: `DEMO-${clinic.id}-${plan.code}-${Date.now()}`,
-          metadata: {
-            plan: plan.code,
-            activated_at: new Date().toISOString(),
-          },
-        },
-      ])
-
-      return NextResponse.json({
-        success: true,
-        redirect_url: "/",
-      })
+    if (!hasXenditEnv()) {
+      return NextResponse.json(
+        { success: false, error: "Pembayaran belum aktif. Mohon hubungi tim XaviKlinika untuk aktivasi paket." },
+        { status: 503 }
+      )
     }
 
-    const orderId = `SUB-${clinic.id}-${plan.code}-${Date.now()}`
-    const snap = new midtransClient.Snap({
-      isProduction: process.env.MIDTRANS_IS_PRODUCTION === "true",
-      serverKey: process.env.MIDTRANS_SERVER_KEY as string,
-      clientKey: midtransClientKey as string,
-    })
-
-    const transaction = await snap.createTransaction({
-      transaction_details: {
-        order_id: orderId,
-        gross_amount: plan.monthlyPrice,
+    const externalId = `SUB-${clinic.id}-${plan.code}-${Date.now()}`
+    const appUrl = getPublicAppUrl(req)
+    const invoice = await createXenditInvoice({
+      externalId,
+      amount: plan.monthlyPrice,
+      description: `Langganan XaviKlinika ${plan.name} - ${clinic.name}`,
+      payerEmail: clinic.billing_email,
+      customerName: clinic.name,
+      successRedirectUrl: `${appUrl}/billing?payment=success`,
+      failureRedirectUrl: `${appUrl}/billing?payment=failed`,
+      metadata: {
+        clinic_id: clinic.id,
+        plan: plan.code,
       },
     })
 
@@ -118,20 +98,22 @@ export async function POST(req: Request) {
       {
         clinic_id: clinic.id,
         event_type: "checkout_created",
-        provider: "midtrans",
-        provider_reference: orderId,
+        provider: "xendit",
+        provider_reference: externalId,
         metadata: {
           plan: plan.code,
           amount: plan.monthlyPrice,
-          redirect_url: transaction.redirect_url,
+          xendit_invoice_id: invoice.id,
+          invoice_url: invoice.invoice_url,
+          status: invoice.status,
         },
       },
     ])
 
     return NextResponse.json({
       success: true,
-      redirect_url: transaction.redirect_url,
-      order_id: orderId,
+      redirect_url: invoice.invoice_url,
+      order_id: externalId,
     })
   } catch (err: unknown) {
     console.error("Create subscription checkout failed", err)

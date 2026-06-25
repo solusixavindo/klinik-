@@ -1,59 +1,39 @@
-import crypto from "crypto"
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import { getNextBillingDate, getPlan } from "@/lib/billing"
+import { isXenditPaidStatus } from "@/lib/xendit"
 
-type MidtransNotification = {
-  order_id?: string
-  status_code?: string
-  gross_amount?: string
-  signature_key?: string
-  transaction_status?: string
-  fraud_status?: string
+type XenditInvoiceWebhook = {
+  id?: string
+  external_id?: string
+  status?: string
+  amount?: number
+  paid_amount?: number
+  payer_email?: string
 }
 
-const isPaidStatus = (status?: string, fraudStatus?: string) =>
-  status === "settlement" || (status === "capture" && fraudStatus !== "challenge")
-
-const getPlanFromOrderId = (orderId: string) => {
-  const parts = orderId.split("-")
+const getPlanFromExternalId = (externalId: string) => {
+  const parts = externalId.split("-")
   return parts.length >= 4 ? parts[2] : ""
 }
 
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as MidtransNotification
-    const { order_id, status_code, gross_amount, signature_key, transaction_status, fraud_status } = body
+    const body = (await req.json()) as XenditInvoiceWebhook
+    const callbackToken = req.headers.get("x-callback-token")
+    const expectedToken = process.env.XENDIT_WEBHOOK_TOKEN
+    const externalId = body.external_id
 
-    if (!order_id || !status_code || !gross_amount) {
+    if (!externalId || !body.status) {
       return NextResponse.json(
-        { success: false, error: "Payload Midtrans tidak lengkap" },
+        { success: false, error: "Payload pembayaran tidak lengkap" },
         { status: 400 }
       )
     }
 
-    if (!process.env.MIDTRANS_SERVER_KEY) {
+    if (expectedToken && callbackToken !== expectedToken) {
       return NextResponse.json(
-        { success: false, error: "MIDTRANS_SERVER_KEY belum dikonfigurasi" },
-        { status: 500 }
-      )
-    }
-
-    if (!signature_key) {
-      return NextResponse.json(
-        { success: false, error: "Signature Midtrans wajib dikirim" },
-        { status: 401 }
-      )
-    }
-
-    const expectedSignature = crypto
-      .createHash("sha512")
-      .update(`${order_id}${status_code}${gross_amount}${process.env.MIDTRANS_SERVER_KEY}`)
-      .digest("hex")
-
-    if (expectedSignature !== signature_key) {
-      return NextResponse.json(
-        { success: false, error: "Signature Midtrans tidak valid" },
+        { success: false, error: "Token webhook pembayaran tidak valid" },
         { status: 401 }
       )
     }
@@ -61,7 +41,7 @@ export async function POST(req: Request) {
     const { data: event, error: eventError } = await supabaseAdmin
       .from("subscription_events")
       .select("clinic_id, metadata")
-      .eq("provider_reference", order_id)
+      .eq("provider_reference", externalId)
       .eq("event_type", "checkout_created")
       .single()
 
@@ -72,10 +52,10 @@ export async function POST(req: Request) {
       )
     }
 
-    const planCode = typeof event.metadata?.plan === "string" ? event.metadata.plan : getPlanFromOrderId(order_id)
+    const planCode = typeof event.metadata?.plan === "string" ? event.metadata.plan : getPlanFromExternalId(externalId)
     const plan = getPlan(planCode)
 
-    if (isPaidStatus(transaction_status, fraud_status)) {
+    if (isXenditPaidStatus(body.status)) {
       const { error: updateError } = await supabaseAdmin
         .from("clinics")
         .update({
@@ -92,9 +72,9 @@ export async function POST(req: Request) {
     await supabaseAdmin.from("subscription_events").insert([
       {
         clinic_id: event.clinic_id,
-        event_type: `payment_${transaction_status || "unknown"}`,
-        provider: "midtrans",
-        provider_reference: order_id,
+        event_type: `payment_${body.status.toLowerCase()}`,
+        provider: "xendit",
+        provider_reference: externalId,
         metadata: body,
       },
     ])

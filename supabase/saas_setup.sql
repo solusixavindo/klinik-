@@ -7,7 +7,7 @@ alter table public.clinics
   add column if not exists trial_ends_at timestamptz,
   add column if not exists current_period_end timestamptz,
   add column if not exists billing_email text,
-  add column if not exists midtrans_customer_id text,
+  add column if not exists xendit_customer_id text,
   add column if not exists updated_at timestamptz not null default now();
 
 alter table public.clinics

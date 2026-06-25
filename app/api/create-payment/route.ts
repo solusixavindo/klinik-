@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import { getClinicFromRequest } from "@/lib/getClinicFromRequest"
-import * as midtransClient from "midtrans-client"
-
-const MIDTRANS_CLIENT_KEY =
-  process.env.MIDTRANS_CLIENT_KEY || process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY
+import { createXenditInvoice, getPublicAppUrl, hasXenditEnv } from "@/lib/xendit"
 
 export async function POST(req: Request) {
   try {
@@ -31,30 +28,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Booking tidak ditemukan" }, { status: 404 })
     }
 
-    if (!process.env.MIDTRANS_SERVER_KEY || !MIDTRANS_CLIENT_KEY) {
+    if (!hasXenditEnv()) {
       return NextResponse.json(
-        { error: "MIDTRANS_SERVER_KEY atau MIDTRANS_CLIENT_KEY belum dikonfigurasi" },
+        { error: "Pembayaran belum aktif. Mohon hubungi admin klinik." },
         { status: 500 }
       )
     }
 
-    const snap = new midtransClient.Snap({
-      isProduction: process.env.MIDTRANS_IS_PRODUCTION === "true",
-      serverKey: process.env.MIDTRANS_SERVER_KEY,
-      clientKey: MIDTRANS_CLIENT_KEY,
-    })
-
-    const orderId = `BOOK-${data.id}-${Date.now()}`
-
-    const transaction = await snap.createTransaction({
-      transaction_details: {
-        order_id: orderId,
-        gross_amount: data.price,
+    const externalId = `BOOK-${auth.clinicId}-${data.id}-${Date.now()}`
+    const appUrl = getPublicAppUrl(req)
+    const invoice = await createXenditInvoice({
+      externalId,
+      amount: data.price,
+      description: `Pembayaran kunjungan ${data.patients?.name || "pasien"}`,
+      customerName: data.patients?.name,
+      successRedirectUrl: `${appUrl}/invoice?payment=success`,
+      failureRedirectUrl: `${appUrl}/invoice?payment=failed`,
+      metadata: {
+        clinic_id: auth.clinicId,
+        booking_id: data.id,
       },
     })
 
     return NextResponse.json({
-      redirect_url: transaction.redirect_url,
+      redirect_url: invoice.invoice_url,
+      order_id: externalId,
     })
   } catch (err: unknown) {
     console.error(err)

@@ -244,7 +244,7 @@ export default function BillingPage() {
       <div className="rounded-3xl border border-slate-700/20 bg-gradient-to-br from-slate-800/30 to-slate-900/20 p-6 shadow-md">
         <h2 className="text-xl font-bold text-white">Catatan Aktivasi</h2>
         <p className="mt-2 text-sm leading-relaxed text-slate-400">
-          Setelah pembayaran berhasil, Midtrans akan mengirim notifikasi ke endpoint
+          Setelah pembayaran berhasil, Xendit akan mengirim notifikasi ke endpoint
           <span className="font-mono text-indigo-300"> /api/subscription/notification</span>. Endpoint ini akan mengaktifkan paket klinik selama 1 bulan.
         </p>
       </div>

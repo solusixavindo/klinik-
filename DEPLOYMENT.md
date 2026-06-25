@@ -4,7 +4,7 @@
 - Akun Hostinger dengan Node.js support
 - Domain sudah dikonfigurasi
 - Supabase project aktif
-- Midtrans account (opsional, ada fallback demo)
+- Xendit account aktif untuk pembayaran production
 
 ---
 
@@ -32,9 +32,8 @@ Set di Hostinger → **Environment Variables**:
 | `NEXT_PUBLIC_SUPABASE_URL` | URL project Supabase |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Anon key Supabase |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role key Supabase (wajib) |
-| `MIDTRANS_SERVER_KEY` | Server key Midtrans (opsional) |
-| `NEXT_PUBLIC_MIDTRANS_CLIENT_KEY` | Client key Midtrans (opsional) |
-| `MIDTRANS_IS_PRODUCTION` | `true` untuk production |
+| `XENDIT_SECRET_KEY` | Secret key Xendit untuk membuat invoice |
+| `XENDIT_WEBHOOK_TOKEN` | Callback token Xendit untuk webhook |
 | `FONNTE_TOKEN` | Token WhatsApp notifikasi (opsional) |
 
 > **Penting**: `SUPABASE_SERVICE_ROLE_KEY` harus key `service_role`, bukan `anon`. Tanpa ini, fitur write ke database tidak berfungsi.
@@ -65,10 +64,11 @@ Setelah deploy, test alur ini:
 2. Login → cek dashboard muncul
 3. Tambah pasien → cek tersimpan di database
 4. Buat booking → cek invoice bisa digenerate
-5. Cek `/laporan/harian` → data nyata dari database
-6. Cek `/pelayanan/antrian-poli` → antrian bisa ditambah & diupdate
-7. Cek `/operasional/stok-obat` → stok bisa ditambah
-8. Cek `/pendaftaran/bpjs` → pendaftaran BPJS bisa disimpan
+5. Upgrade paket → diarahkan ke invoice Xendit
+6. Cek `/laporan/harian` → data nyata dari database
+7. Cek `/pelayanan/antrian-poli` → antrian bisa ditambah & diupdate
+8. Cek `/operasional/stok-obat` → stok bisa ditambah
+9. Cek `/pendaftaran/bpjs` → pendaftaran BPJS bisa disimpan
 
 ---
 
