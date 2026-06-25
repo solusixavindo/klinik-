@@ -1,20 +1,46 @@
-import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { NextResponse } from "next/server"
 
-const publicRoutes = ["/", "/demo", "/login", "/register", "/book", "/api/health", "/api/public"]
+const publicRoutePrefixes = [
+  "/demo",
+  "/login",
+  "/register",
+  "/book",
+  "/api/public",
+  "/api/register",
+]
+
+const publicRoutes = [
+  "/",
+  "/api/env-check",
+  "/api/health",
+]
+
+function isPublicPath(pathname: string) {
+  return (
+    publicRoutes.includes(pathname) ||
+    publicRoutePrefixes.some((route) => pathname === route || pathname.startsWith(`${route}/`))
+  )
+}
 
 export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
-  const isPublicRoute = publicRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`))
 
-  if (isPublicRoute) {
+  if (isPublicPath(pathname)) {
     return NextResponse.next()
   }
 
   const hasAuth = request.cookies.getAll().some((cookie) => cookie.name.includes("-auth-token") && cookie.value)
   const hasDemoSession = Boolean(request.cookies.get("xaviklinika-demo-session")?.value)
 
-  if (!hasAuth && !hasDemoSession && !pathname.startsWith("/api/")) {
+  if (!hasAuth && !hasDemoSession && pathname.startsWith("/api/")) {
+    return NextResponse.json(
+      { success: false, error: "Sesi login tidak ditemukan" },
+      { status: 401 }
+    )
+  }
+
+  if (!hasAuth && !hasDemoSession) {
     return NextResponse.redirect(new URL("/login", request.url))
   }
 
