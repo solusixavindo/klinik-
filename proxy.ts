@@ -6,20 +6,35 @@ const publicRoutePrefixes = [
   "/login",
   "/register",
   "/book",
+]
+
+const publicApiPrefixes = [
   "/api/public",
   "/api/register",
 ]
 
 const publicRoutes = [
   "/",
-  "/api/env-check",
-  "/api/health",
 ]
 
-function isPublicPath(pathname: string) {
+const publicApiRoutes = [
+  "/api/health",
+  "/api/env-check",
+  "/api/register/diagnostics",
+]
+
+function normalizePathname(pathname: string) {
+  return pathname.length > 1 && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname
+}
+
+function isPublicPath(rawPathname: string) {
+  const pathname = normalizePathname(rawPathname)
+
   return (
     publicRoutes.includes(pathname) ||
-    publicRoutePrefixes.some((route) => pathname === route || pathname.startsWith(`${route}/`))
+    publicApiRoutes.includes(pathname) ||
+    publicRoutePrefixes.some((route) => pathname === route || pathname.startsWith(`${route}/`)) ||
+    publicApiPrefixes.some((route) => pathname === route || pathname.startsWith(`${route}/`))
   )
 }
 
