@@ -17,12 +17,28 @@ import {
   XAxis,
   YAxis,
 } from "recharts"
+import {
+  TrendingUp,
+  UserPlus,
+  Clock,
+  Stethoscope,
+  PackageOpen,
+  CalendarCheck,
+} from "lucide-react"
 import { toast } from "sonner"
 import { supabase } from "@/lib/supabase"
 import { useProfile } from "@/hooks/useProfile"
 import { allDashboardMenuItems } from "@/lib/dashboardMenu"
 import { hasPlanFeature, PlanCode } from "@/lib/billing"
 import { clearDemoSession } from "@/lib/demoSession"
+
+function getGreeting() {
+  const h = new Date().getHours()
+  if (h < 12) return "Selamat pagi"
+  if (h < 15) return "Selamat siang"
+  if (h < 19) return "Selamat sore"
+  return "Selamat malam"
+}
 
 type Booking = {
   id: string
@@ -344,54 +360,66 @@ export default function DashboardPage() {
       value: todayStats.total.toLocaleString("id-ID"),
       delta: `${todayStats.done} selesai · ${todayStats.pending} pending`,
       deltaLabel: "",
-      icon: "▦",
+      Icon: CalendarCheck,
       href: "/bookings",
-      color: "text-emerald-400",
+      deltaColor: "text-sky-400",
+      cardBg: "from-sky-950/40 to-slate-900/30 border-sky-700/20",
+      iconBg: "bg-sky-600/15 text-sky-300",
     },
     {
       label: "Revenue Bulan Ini",
       value: `Rp ${currencyFormatter.format(revenueThisMonth)}`,
       delta: pctChange(revenueThisMonth, revenueLastMonth),
       deltaLabel: "vs bulan lalu",
-      icon: "▩",
+      Icon: TrendingUp,
       href: "/laporan/pendapatan",
-      color: revenueThisMonth >= revenueLastMonth ? "text-emerald-400" : "text-rose-400",
+      deltaColor: revenueThisMonth >= revenueLastMonth ? "text-emerald-400" : "text-rose-400",
+      cardBg: "from-emerald-950/40 to-slate-900/30 border-emerald-700/20",
+      iconBg: "bg-emerald-600/15 text-emerald-300",
     },
     {
       label: "Pasien Baru Bulan Ini",
       value: newPatientsThisMonth.toLocaleString("id-ID"),
       delta: pctChange(newPatientsThisMonth, newPatientsLastMonth),
       deltaLabel: "vs bulan lalu",
-      icon: "◇",
+      Icon: UserPlus,
       href: "/patients",
-      color: newPatientsThisMonth >= newPatientsLastMonth ? "text-emerald-400" : "text-rose-400",
+      deltaColor: newPatientsThisMonth >= newPatientsLastMonth ? "text-emerald-400" : "text-rose-400",
+      cardBg: "from-blue-950/40 to-slate-900/30 border-blue-700/20",
+      iconBg: "bg-blue-600/15 text-blue-300",
     },
     {
       label: "Antrian Aktif",
       value: (queueNow.waiting + queueNow.called).toLocaleString("id-ID"),
       delta: `${queueNow.serving} dilayani`,
       deltaLabel: "",
-      icon: "◌",
+      Icon: Clock,
       href: "/pelayanan/antrian-poli",
-      color: "text-sky-400",
+      deltaColor: "text-amber-400",
+      cardBg: "from-amber-950/40 to-slate-900/30 border-amber-700/20",
+      iconBg: "bg-amber-600/15 text-amber-300",
     },
     {
       label: "Total Dokter Aktif",
       value: stats.doctors.toLocaleString("id-ID"),
-      delta: "dokter",
-      deltaLabel: "terdaftar",
-      icon: "▧",
+      delta: "dokter terdaftar",
+      deltaLabel: "",
+      Icon: Stethoscope,
       href: "/doctors",
-      color: "text-indigo-400",
+      deltaColor: "text-violet-400",
+      cardBg: "from-violet-950/40 to-slate-900/30 border-violet-700/20",
+      iconBg: "bg-violet-600/15 text-violet-300",
     },
     {
       label: "Stok Menipis",
       value: lowStockCount.toLocaleString("id-ID"),
-      delta: lowStockCount > 0 ? "perlu restock" : "stok aman",
+      delta: lowStockCount > 0 ? "perlu restock segera" : "semua stok aman",
       deltaLabel: "",
-      icon: "△",
+      Icon: PackageOpen,
       href: "/stok",
-      color: lowStockCount > 0 ? "text-amber-400" : "text-emerald-400",
+      deltaColor: lowStockCount > 0 ? "text-rose-400" : "text-emerald-400",
+      cardBg: lowStockCount > 0 ? "from-rose-950/40 to-slate-900/30 border-rose-700/20" : "from-slate-800/40 to-slate-900/30 border-slate-700/20",
+      iconBg: lowStockCount > 0 ? "bg-rose-600/15 text-rose-300" : "bg-slate-600/15 text-slate-300",
     },
   ]
 
@@ -428,7 +456,9 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 border-b border-slate-700/20 pb-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Selamat pagi, {profile?.role === "admin" ? "Admin" : "Staff"}</h1>
+          <h1 className="text-2xl font-bold text-white">
+            {getGreeting()}, {profile?.full_name || (profile?.role === "admin" ? "Admin" : "Staff")} 👋
+          </h1>
           <p className="mt-1 text-sm text-slate-400">Berikut ringkasan aktivitas klinik hari ini.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -451,6 +481,21 @@ export default function DashboardPage() {
             Logout
           </button>
         </div>
+      </div>
+
+      {/* Hari Ini Sekilas */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          { label: "Janji Hari Ini", value: todayStats.total, color: "text-sky-400" },
+          { label: "Sudah Selesai", value: todayStats.done, color: "text-emerald-400" },
+          { label: "Invoice Pending", value: pendingCount, color: "text-amber-400" },
+          { label: "Revenue Hari Ini", value: `Rp ${currencyFormatter.format(todayStats.revenue_today ?? 0)}`, color: "text-indigo-400" },
+        ].map((item) => (
+          <div key={item.label} className="rounded-2xl border border-slate-700/20 bg-slate-900/30 px-4 py-3">
+            <p className="text-xs text-slate-500 font-medium">{item.label}</p>
+            <p className={`mt-1 text-lg font-bold ${item.color}`}>{item.value}</p>
+          </div>
+        ))}
       </div>
 
       {/* Upgrade Banner */}
@@ -487,17 +532,17 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {statCards.map((card) => (
           <Link key={card.label} href={card.href}>
-            <div className="group h-full rounded-3xl border border-slate-700/20 bg-gradient-to-br from-slate-800/40 to-slate-900/30 p-5 shadow-md transition hover:border-indigo-500/30 hover:shadow-lg">
+            <div className={`group h-full rounded-3xl border bg-gradient-to-br ${card.cardBg} p-5 shadow-md transition hover:shadow-lg hover:brightness-110`}>
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-slate-400">{card.label}</p>
                   <h3 className="mt-3 text-2xl font-bold text-white truncate">{card.value}</h3>
-                  <p className={`mt-2 text-xs font-semibold ${card.color}`}>
+                  <p className={`mt-2 text-xs font-semibold ${card.deltaColor}`}>
                     {card.delta}{card.deltaLabel ? ` ${card.deltaLabel}` : ""}
                   </p>
                 </div>
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-indigo-600/15 text-xl text-indigo-300">
-                  {card.icon}
+                <div className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl ${card.iconBg}`}>
+                  <card.Icon size={22} />
                 </div>
               </div>
             </div>
@@ -599,9 +644,9 @@ export default function DashboardPage() {
           )}
         </DashboardPanel>
 
-        {/* Antrian Hari Ini — real-time */}
-        <DashboardPanel title="Antrian Hari Ini" action="Auto-refresh 30d">
-          <div className="mb-3 flex gap-3">
+        {/* Antrian Hari Ini — Timeline */}
+        <DashboardPanel title="Antrian Hari Ini" action="Live">
+          <div className="mb-4 flex gap-3">
             <div className="flex-1 rounded-2xl border border-amber-600/20 bg-amber-950/20 p-3 text-center">
               <p className="text-xs text-amber-400 font-semibold">Menunggu</p>
               <p className="mt-1 text-2xl font-bold text-white">{queueNow.waiting}</p>
@@ -616,18 +661,34 @@ export default function DashboardPage() {
             </div>
           </div>
           {queueEntries.length === 0 ? (
-            <p className="text-sm text-slate-400">Tidak ada antrian aktif saat ini.</p>
+            <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
+              <span className="text-2xl opacity-30">◎</span>
+              <p className="text-sm text-slate-400">Tidak ada antrian aktif saat ini.</p>
+            </div>
           ) : (
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {queueEntries.map((entry) => (
-                <div key={entry.id} className="flex items-center justify-between rounded-2xl border border-slate-700/20 bg-slate-900/20 px-3 py-2">
-                  <div>
-                    <p className="text-sm font-semibold text-white">{entry.patients?.name || "—"}</p>
-                    <p className="text-xs text-slate-500">{entry.doctors?.name || "Umum"}</p>
-                  </div>
-                  <div>{statusBadge(entry.status)}</div>
-                </div>
-              ))}
+            <div className="relative max-h-52 overflow-y-auto pl-5">
+              <div className="absolute left-5 top-2 bottom-2 w-px bg-slate-700/40" />
+              <div className="space-y-4">
+                {queueEntries.map((entry) => {
+                  const dotColor =
+                    entry.status === "serving" ? "bg-emerald-400 shadow-emerald-400/50" :
+                    entry.status === "called" ? "bg-sky-400 shadow-sky-400/50" :
+                    entry.status === "paid" ? "bg-indigo-400 shadow-indigo-400/50" :
+                    "bg-amber-400 shadow-amber-400/50"
+                  return (
+                    <div key={entry.id} className="relative flex items-start gap-4 pl-4">
+                      <span className={`absolute -left-[3px] mt-1.5 h-2.5 w-2.5 rounded-full shadow-md ${dotColor}`} />
+                      <div className="flex w-full items-center justify-between rounded-2xl border border-slate-700/20 bg-slate-900/20 px-3 py-2">
+                        <div>
+                          <p className="text-sm font-semibold text-white">{entry.patients?.name || "—"}</p>
+                          <p className="text-xs text-slate-500">{entry.doctors?.name || "Umum"}</p>
+                        </div>
+                        <div>{statusBadge(entry.status)}</div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           )}
         </DashboardPanel>

@@ -8,6 +8,7 @@ type Profile = {
   id: string
   clinic_id: string
   role: string
+  full_name?: string
   avatar_url?: string
   clinics?: { name?: string }
 }
