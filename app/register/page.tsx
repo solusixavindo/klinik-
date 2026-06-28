@@ -9,7 +9,7 @@ import { toRegisterErrorMessage } from "@/lib/userFacingErrors"
 const paidPlans: PlanCode[] = ["basic", "standard", "pro", "premium"]
 
 const planHighlights: Record<string, string> = {
-  basic:    "Data pasien & dokter · Jadwal dokter · Booking sederhana",
+  basic:    "Data pasien & dokter · Jadwal dokter · Booking via WA",
   standard: "Semua Basic + Antrian · Rekam Medis · BPJS",
   pro:      "Semua Standard + Kasir · Stok Obat · Laboratorium",
   premium:  "Semua Pro + Multi-cabang · Dashboard advanced",

@@ -49,26 +49,7 @@ export function MedicalRecordsWrapper() {
 }
 
 export function QueueWrapper() {
-  return (
-    <div>
-      <div className="space-y-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-indigo-400">Pelayanan</p>
-            <h1 className="mt-2 text-3xl font-bold text-white">Antrian Poli</h1>
-            <p className="mt-2 max-w-2xl text-slate-400">Sistem manajemen antrian digital untuk efisiensi pelayanan.</p>
-          </div>
-        </div>
-        <div className="rounded-3xl border border-slate-700/20 bg-gradient-to-br from-slate-800/30 to-slate-900/20 p-6 shadow-md">
-          <div className="text-center py-12">
-            <span className="text-4xl">⏱️</span>
-            <h3 className="text-xl font-bold text-white mt-4 mb-2">Sistem Antrian Digital</h3>
-            <p className="text-slate-400">Pantau antrian real-time dengan display TV dan notifikasi otomatis.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+  return <SubQueueView title="Antrian Poli" icon="🏥" type="poli" />
 }
 
 function SubQueueView({ title, icon, type }: { title: string; icon: string; type: string }) {

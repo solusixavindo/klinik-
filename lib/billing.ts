@@ -47,7 +47,7 @@ export const PLANS: Record<PlanCode, Plan> = {
     features: [
       "Data pasien",
       "Jadwal dokter",
-      "Booking sederhana",
+      "Booking via WA + input oleh staf",
       "Dashboard ringkas",
       "Maksimal 2 user",
     ],
