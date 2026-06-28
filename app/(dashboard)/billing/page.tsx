@@ -115,10 +115,10 @@ export default function BillingPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-indigo-400">Monetisasi SaaS</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-indigo-400">Langganan</p>
           <h1 className="mt-2 text-3xl font-bold text-white">Paket & Langganan</h1>
           <p className="mt-2 max-w-2xl text-slate-400">
-            Pilih paket bulanan sesuai ukuran klinik. Paket ini menjadi dasar penawaran dari harga murah sampai premium.
+            Pilih atau upgrade paket sesuai kebutuhan klinik Anda. Semua paket baru mendapatkan 14 hari gratis.
           </p>
         </div>
 
@@ -130,32 +130,10 @@ export default function BillingPage() {
         )}
       </div>
 
-      <div className="rounded-3xl border border-indigo-500/20 bg-gradient-to-br from-indigo-950/20 to-slate-900/20 p-6 shadow-lg">
-        <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr] lg:items-center">
-          <div>
-            <p className="text-xs uppercase tracking-widest text-indigo-400 font-semibold">Upgrade Premium</p>
-            <h2 className="mt-3 text-2xl font-bold text-white">Pilih paket yang siap untuk growth klinik Anda</h2>
-            <p className="mt-3 max-w-2xl text-slate-400">
-              Premium memberi Anda akses ke fitur multi cabang, dashboard advanced, laporan performa, custom workflow, dan support prioritas.
-            </p>
-          </div>
-          <div className="rounded-3xl border border-indigo-600/20 bg-slate-950/30 p-4">
-            <p className="text-sm font-semibold text-indigo-200">Benefit Utama</p>
-            <ul className="mt-4 space-y-3 text-sm text-slate-300">
-              <li>✔ Multi cabang & konsolidasi data</li>
-              <li>✔ Laporan SLA & performa lengkap</li>
-              <li>✔ Alur operasi klinik yang dapat disesuaikan</li>
-              <li>✔ Prioritas support bisnis</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
         {planOrder.map((code) => {
           const plan = PLANS[code]
           const isCurrent = subscription?.plan.code === code
-          const isPaid = code !== "trial"
           const isPopular = code === "pro"
 
           return (
@@ -207,17 +185,13 @@ export default function BillingPage() {
                 <button className="btn-secondary w-full" disabled>
                   Paket Aktif
                 </button>
-              ) : isPaid ? (
+              ) : (
                 <button
                   onClick={() => checkout(code)}
                   disabled={checkoutPlan === code}
                   className="btn-primary w-full"
                 >
                   {checkoutPlan === code ? "Membuat Checkout..." : code === "premium" ? "Konsultasi WhatsApp" : "Upgrade Paket"}
-                </button>
-              ) : (
-                <button className="btn-secondary w-full" disabled>
-                  Trial Otomatis
                 </button>
               )}
             </div>
@@ -226,10 +200,10 @@ export default function BillingPage() {
       </div>
 
       <div className="rounded-3xl border border-slate-700/20 bg-gradient-to-br from-slate-800/30 to-slate-900/20 p-6 shadow-md">
-        <h2 className="text-xl font-bold text-white">Catatan Aktivasi</h2>
+        <h2 className="text-lg font-bold text-white">Informasi Pembayaran</h2>
         <p className="mt-2 text-sm leading-relaxed text-slate-400">
-          Setelah pembayaran berhasil, Xendit akan mengirim notifikasi ke endpoint
-          <span className="font-mono text-indigo-300"> /api/subscription/notification</span>. Endpoint ini akan mengaktifkan paket klinik selama 1 bulan.
+          Setelah pembayaran berhasil, paket Anda diaktifkan secara otomatis dalam hitungan menit. Konfirmasi akan dikirim ke email yang terdaftar.
+          Untuk pertanyaan atau kendala pembayaran, hubungi tim kami melalui WhatsApp.
         </p>
       </div>
     </div>

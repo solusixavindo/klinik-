@@ -8,11 +8,11 @@ import { toRegisterErrorMessage } from "@/lib/userFacingErrors"
 
 const paidPlans: PlanCode[] = ["basic", "standard", "pro", "premium"]
 
-const planHighlights: Record<string, string[]> = {
-  basic:    ["Data pasien & dokter", "Jadwal dokter", "Booking sederhana"],
-  standard: ["Semua Basic +", "Antrian & Rekam Medis", "Operasional & BPJS"],
-  pro:      ["Semua Standard +", "Kasir & Invoice", "Stok Obat & Laboratorium"],
-  premium:  ["Semua Pro +", "Multi-cabang", "Dashboard advanced"],
+const planHighlights: Record<string, string> = {
+  basic:    "Data pasien & dokter · Jadwal dokter · Booking sederhana",
+  standard: "Semua Basic + Antrian · Rekam Medis · BPJS",
+  pro:      "Semua Standard + Kasir · Stok Obat · Laboratorium",
+  premium:  "Semua Pro + Multi-cabang · Dashboard advanced",
 }
 
 type TrialForm = {
@@ -98,8 +98,6 @@ function RegisterPageInner() {
     }
   }
 
-  const selectedPlan = form.plan ? PLANS[form.plan] : null
-
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 px-4 py-8">
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
@@ -107,7 +105,7 @@ function RegisterPageInner() {
         <div className="absolute bottom-0 left-0 h-96 w-96 rounded-full bg-purple-600/10 blur-3xl" />
       </div>
 
-      <div className="relative mx-auto w-full max-w-6xl">
+      <div className="relative mx-auto w-full max-w-5xl">
         <header className="mb-10 text-center">
           <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 text-2xl font-bold text-white shadow-lg shadow-indigo-600/20">
             X
@@ -116,7 +114,7 @@ function RegisterPageInner() {
           <p className="mt-2 text-slate-400">Pilih paket, daftar, dan nikmati semua fitur gratis selama 14 hari. Tanpa kartu kredit.</p>
         </header>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,440px)_1fr] lg:items-start">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,460px)_1fr] lg:items-start">
           {/* Form */}
           <section className="rounded-3xl border border-slate-700/30 bg-gradient-to-b from-slate-800/50 to-slate-900/50 p-8 shadow-2xl backdrop-blur-xl">
             <div className="mb-6">
@@ -188,10 +186,8 @@ function RegisterPageInner() {
                     </option>
                   ))}
                 </select>
-                {selectedPlan && (
-                  <p className="mt-2 text-xs text-indigo-300">
-                    ✓ {planHighlights[form.plan]?.join(" · ")}
-                  </p>
+                {form.plan && (
+                  <p className="mt-2 text-xs text-indigo-300">✓ {planHighlights[form.plan]}</p>
                 )}
               </div>
             </div>
@@ -228,67 +224,49 @@ function RegisterPageInner() {
             </p>
           </section>
 
-          {/* Plan comparison */}
-          <aside className="space-y-4">
-            <div className="rounded-3xl border border-slate-700/30 bg-slate-900/45 px-6 py-5 shadow-xl backdrop-blur-xl">
-              <p className="text-xs font-bold uppercase tracking-widest text-indigo-300">Semua Paket Gratis 14 Hari</p>
-              <p className="mt-1 text-lg font-bold text-white">Pilih paket sesuai ukuran klinik Anda</p>
-            </div>
+          {/* Right side — benefits */}
+          <aside className="space-y-5">
+            <div className="rounded-3xl border border-slate-700/30 bg-slate-900/45 p-7 shadow-xl backdrop-blur-xl">
+              <p className="text-xs font-bold uppercase tracking-widest text-indigo-300">Kenapa XaviKlinika?</p>
+              <h2 className="mt-2 text-xl font-bold text-white">Siap operasional sejak hari pertama</h2>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              {paidPlans.map((code) => {
-                const plan = PLANS[code]
-                const isSelected = form.plan === code
-                const accent = code === "premium" ? "border-amber-500/40 bg-amber-950/10" : code === "pro" ? "border-indigo-500/30 bg-indigo-950/10" : "border-slate-700/30 bg-slate-900/40"
-                const badge = code === "pro" ? "bg-indigo-600/20 text-indigo-300 border-indigo-500/30" : code === "premium" ? "bg-amber-600/20 text-amber-300 border-amber-500/30" : "bg-slate-700/20 text-slate-400 border-slate-600/20"
-                return (
-                  <button
-                    key={code}
-                    type="button"
-                    onClick={() => updateForm({ plan: code })}
-                    className={`rounded-3xl border p-5 text-left transition-all ${accent} ${isSelected ? "ring-2 ring-indigo-500/60 shadow-lg shadow-indigo-600/10" : "hover:border-slate-600/60"}`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <span className={`rounded-full border px-2 py-0.5 text-xs font-bold ${badge}`}>{plan.name}</span>
-                      {isSelected && <span className="text-xs font-bold text-indigo-400">✓ Dipilih</span>}
+              <ul className="mt-6 space-y-4">
+                {[
+                  ["🏥", "Dashboard siap pakai", "Pantau pasien, antrian, dan pendapatan dalam satu layar."],
+                  ["🔒", "Data klinik aman & terpisah", "Setiap klinik punya database sendiri yang terenkripsi."],
+                  ["📦", "Fitur lengkap sesuai paket", "Dari booking sederhana sampai rekam medis & stok obat."],
+                  ["🔔", "Reminder perpanjangan via WA", "Kami ingatkan 3 hari sebelum masa trial berakhir."],
+                  ["⚡", "Aktif dalam 5 menit", "Daftar, login, langsung bisa digunakan."],
+                ].map(([icon, title, desc]) => (
+                  <li key={title as string} className="flex items-start gap-4">
+                    <span className="mt-0.5 text-xl">{icon}</span>
+                    <div>
+                      <p className="font-semibold text-white">{title as string}</p>
+                      <p className="mt-0.5 text-sm text-slate-400">{desc as string}</p>
                     </div>
-                    <p className="mt-3 text-lg font-bold text-white">{plan.priceLabel}</p>
-                    <p className="text-xs text-slate-500">setelah 14 hari gratis</p>
-                    <ul className="mt-3 space-y-1">
-                      {planHighlights[code].map((f) => (
-                        <li key={f} className="text-xs text-slate-300">
-                          <span className="mr-1 text-emerald-400">✓</span>{f}
-                        </li>
-                      ))}
-                    </ul>
-                  </button>
-                )
-              })}
-            </div>
-
-            <div className="rounded-3xl border border-emerald-700/20 bg-emerald-950/10 p-5">
-              <div className="flex items-start gap-3">
-                <span className="text-2xl">🎉</span>
-                <div>
-                  <p className="font-semibold text-white">14 Hari Pertama Gratis</p>
-                  <p className="mt-1 text-sm text-slate-400">
-                    Gunakan semua fitur paket pilihan Anda tanpa biaya. Di hari ke-12, kami ingatkan via WhatsApp sebelum masa trial berakhir.
-                  </p>
-                </div>
-              </div>
+                  </li>
+                ))}
+              </ul>
             </div>
 
             <div className="grid grid-cols-3 gap-3 text-center">
               {[
                 ["5 menit", "Waktu setup"],
+                ["0 rupiah", "14 hari pertama"],
                 ["100%", "Data aman"],
-                ["0 rupiah", "Hari pertama"],
               ].map(([val, label]) => (
-                <div key={label} className="rounded-2xl border border-slate-700/30 bg-slate-900/40 p-4">
+                <div key={label as string} className="rounded-2xl border border-slate-700/30 bg-slate-900/40 p-4">
                   <p className="text-lg font-bold text-white">{val}</p>
                   <p className="mt-0.5 text-xs text-slate-500">{label}</p>
                 </div>
               ))}
+            </div>
+
+            <div className="rounded-3xl border border-emerald-700/20 bg-emerald-950/10 p-5">
+              <p className="font-semibold text-white">🎉 14 Hari Pertama Gratis</p>
+              <p className="mt-1 text-sm text-slate-400">
+                Gunakan semua fitur paket pilihan Anda tanpa biaya. Di hari ke-11, kami ingatkan via WhatsApp sebelum masa trial berakhir.
+              </p>
             </div>
           </aside>
         </div>
