@@ -223,7 +223,50 @@ export default function PengaturanPage() {
               <div className="grid gap-4 md:grid-cols-3">
                 <div>
                   <label className="label">Nama Bank</label>
-                  <input type="text" value={form.bank_name} onChange={(e) => f(e.target.value, "bank_name")} className="input" placeholder="contoh: CIMB Niaga" />
+                  <select value={form.bank_name} onChange={(e) => f(e.target.value, "bank_name")} className="input">
+                    <option value="">-- Pilih Bank --</option>
+                    <option>Bank BCA</option>
+                    <option>Bank BRI</option>
+                    <option>Bank BNI</option>
+                    <option>Bank Mandiri</option>
+                    <option>Bank BTN</option>
+                    <option>Bank CIMB Niaga</option>
+                    <option>Bank Danamon</option>
+                    <option>Bank Permata</option>
+                    <option>Bank Panin</option>
+                    <option>Bank OCBC NISP</option>
+                    <option>Bank Maybank</option>
+                    <option>Bank HSBC</option>
+                    <option>Bank Standard Chartered</option>
+                    <option>Bank Citibank</option>
+                    <option>Bank DBS</option>
+                    <option>Bank Mega</option>
+                    <option>Bank Bukopin</option>
+                    <option>Bank Sinarmas</option>
+                    <option>Bank Commonwealth</option>
+                    <option>Bank UOB</option>
+                    <option>Bank Muamalat</option>
+                    <option>Bank Syariah Indonesia (BSI)</option>
+                    <option>Bank BRI Syariah</option>
+                    <option>Bank BNI Syariah</option>
+                    <option>Bank Mandiri Syariah</option>
+                    <option>Bank Neo Commerce</option>
+                    <option>Bank Jago</option>
+                    <option>SeaBank</option>
+                    <option>Allo Bank</option>
+                    <option>Bank Raya</option>
+                    <option>Bank Sahabat Sampoerna</option>
+                    <option>Bank Aceh Syariah</option>
+                    <option>Bank BJB</option>
+                    <option>Bank DKI</option>
+                    <option>Bank Jatim</option>
+                    <option>Bank Jateng</option>
+                    <option>Bank Sumut</option>
+                    <option>Bank Sumsel Babel</option>
+                    <option>Bank BPD Bali</option>
+                    <option>Bank Kalsel</option>
+                    <option>Bank Sulselbar</option>
+                  </select>
                 </div>
                 <div>
                   <label className="label">Nomor Rekening</label>
