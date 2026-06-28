@@ -21,6 +21,8 @@ const publicApiRoutes = [
   "/api/health",
   "/api/env-check",
   "/api/register/diagnostics",
+  "/api/xendit",
+  "/api/subscription/notification",
 ]
 
 function normalizePathname(pathname: string) {
