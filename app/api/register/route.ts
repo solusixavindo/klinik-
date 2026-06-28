@@ -220,30 +220,42 @@ export async function POST(req: Request) {
     }
 
     step = "create_auth_user"
-    const { data: userData, error: userError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: {
-        clinic_name: clinicName,
-        plan,
+    // Direct fetch to Supabase Auth Admin API — bypasses supabase-js URL construction
+    // which caused "Invalid path specified in request URL" on some Vercel deployments
+    const rawSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ""
+    const supabaseBase = rawSupabaseUrl.replace(/\s+/g, "").replace(/\/+$/, "")
+    const authAdminUrl = `${supabaseBase}/auth/v1/admin/users`
+
+    const authRes = await fetch(authAdminUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${serviceKey}`,
+        "apikey": serviceKey,
       },
+      body: JSON.stringify({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { clinic_name: clinicName, plan },
+      }),
     })
 
-    if (userError) {
-      const msg = userError.message.toLowerCase()
-      if (msg.includes("already") || msg.includes("exist")) {
-        logRegisterError(step, userError)
+    type AuthUser = { id: string; email: string }
+    type AuthResponse = { id?: string; email?: string; msg?: string; message?: string; error_description?: string }
+    const authJson = await authRes.json() as AuthResponse
+
+    if (!authRes.ok || !authJson.id) {
+      const msg = (authJson.msg ?? authJson.message ?? authJson.error_description ?? "").toLowerCase()
+      if (msg.includes("already") || msg.includes("exist") || authRes.status === 422) {
+        logRegisterError(step, new Error(msg))
         return errorResponse("Email sudah terdaftar. Silakan login atau gunakan email lain.", 409, "EMAIL_EXISTS")
       }
-      throw userError
+      throw new Error(authJson.msg ?? authJson.message ?? `Auth API ${authRes.status}`)
     }
 
-    if (!userData.user) {
-      throw new Error("Gagal membuat akun")
-    }
-
-    const user = userData.user
+    const user: AuthUser = { id: authJson.id, email: authJson.email ?? email }
     createdUserId = user.id
 
     step = "create_clinic"

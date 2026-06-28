@@ -2,6 +2,13 @@ import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import { getSupabaseEnvCheck } from "@/lib/supabaseEnv"
 
+// Returns masked first 40 chars of URL so we can debug without exposing full URL
+function maskUrl(raw: string | undefined): string {
+  if (!raw) return "(empty)"
+  const safe = raw.replace(/\s/g, "·").replace(/[^\x20-\x7E]/g, "?")
+  return safe.length > 40 ? safe.slice(0, 40) + "…" : safe
+}
+
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
 
