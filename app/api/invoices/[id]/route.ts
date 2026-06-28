@@ -38,12 +38,19 @@ export async function GET(
       )
     }
 
-    const { data: invoice, error } = await supabaseAdmin
-      .from("bookings")
-      .select("*, patients(name, phone), doctors(name)")
-      .eq("id", id)
-      .eq("clinic_id", profile.clinic_id)
-      .single()
+    const [{ data: invoice, error }, { data: clinic }] = await Promise.all([
+      supabaseAdmin
+        .from("bookings")
+        .select("*, patients(name, phone), doctors(name)")
+        .eq("id", id)
+        .eq("clinic_id", profile.clinic_id)
+        .single(),
+      supabaseAdmin
+        .from("clinics")
+        .select("name, bank_account, bank_name, bank_holder")
+        .eq("id", profile.clinic_id)
+        .single(),
+    ])
 
     if (error || !invoice) {
       return NextResponse.json(
@@ -52,7 +59,7 @@ export async function GET(
       )
     }
 
-    return NextResponse.json({ success: true, invoice })
+    return NextResponse.json({ success: true, invoice, clinic })
   } catch (err: unknown) {
     console.error("Fetch invoice failed", err)
     const message = err instanceof Error ? err.message : "Gagal mengambil invoice"

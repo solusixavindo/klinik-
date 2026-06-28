@@ -18,16 +18,25 @@ type InvoiceData = {
   }
 }
 
+type ClinicData = {
+  name?: string
+  bank_account?: string | null
+  bank_name?: string | null
+  bank_holder?: string | null
+}
+
 type InvoiceApiResponse = {
   success?: boolean
   error?: string
   invoice?: InvoiceData
+  clinic?: ClinicData
 }
 
 export default function InvoicePage() {
   const params = useParams<{ id: string }>()
   const id = params.id
   const [data, setData] = useState<InvoiceData | null>(null)
+  const [clinic, setClinic] = useState<ClinicData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -59,6 +68,7 @@ export default function InvoicePage() {
       }
 
       setData(result.invoice)
+      setClinic(result.clinic ?? null)
     } catch (err) {
       const message = err instanceof Error ? err.message : "Gagal mengambil invoice"
       setError(message)
@@ -180,11 +190,16 @@ export default function InvoicePage() {
         <div className="rounded-2xl border border-slate-700/20 bg-slate-900/30 p-6 mb-8 print:bg-gray-50 print:border-gray-300">
           <p className="font-bold text-white mb-4 text-sm uppercase tracking-wider print:text-gray-800">📋 Metode Pembayaran</p>
           <div className="space-y-2 text-sm text-slate-300 print:text-gray-700">
-            <p className="font-semibold text-white print:text-gray-800">💳 Bank Transfer BCA</p>
-            <p>Nomor Rekening: <span className="font-mono font-bold">123456789</span></p>
-            <p>Atas Nama: <span className="font-bold">Xavindo Clinic</span></p>
+            {clinic?.bank_account && clinic?.bank_name ? (
+              <>
+                <p className="font-semibold text-white print:text-gray-800">💳 Transfer {clinic.bank_name}</p>
+                <p>Nomor Rekening: <span className="font-mono font-bold">{clinic.bank_account}</span></p>
+                <p>Atas Nama: <span className="font-bold">{clinic.bank_holder || clinic.name || "-"}</span></p>
+              </>
+            ) : (
+              <p>Hubungi klinik untuk informasi metode pembayaran.</p>
+            )}
           </div>
-          {/* QRIS would go here if image exists */}
         </div>
 
         {/* Footer */}
