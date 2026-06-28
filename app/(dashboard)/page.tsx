@@ -685,31 +685,39 @@ export default function DashboardPage() {
         </div>
 
         <div className="space-y-6">
-          <DashboardPanel title="Demografi Pasien" action="Rata-rata nasional (ilustrasi)">
-            <div className="grid grid-cols-1 items-center gap-4 md:grid-cols-[180px_1fr]">
-              <div className="h-44">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={demographics} innerRadius={46} outerRadius={78} paddingAngle={2} dataKey="value">
-                      {demographics.map((item) => (
-                        <Cell key={item.name} fill={item.color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
+          <DashboardPanel title="Demografi Pasien">
+            {stats.patients === 0 ? (
+              <div className="flex h-44 flex-col items-center justify-center gap-2 text-center">
+                <span className="text-3xl opacity-30">◎</span>
+                <p className="text-sm font-medium text-slate-400">Belum ada data pasien</p>
+                <p className="text-xs text-slate-500">Grafik demografi akan muncul setelah pasien pertama terdaftar.</p>
               </div>
-              <div className="space-y-3">
-                {demographics.map((item) => (
-                  <div key={item.name} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2 text-slate-300">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }}></span>
-                      {item.name}
+            ) : (
+              <div className="grid grid-cols-1 items-center gap-4 md:grid-cols-[180px_1fr]">
+                <div className="h-44">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={demographics} innerRadius={46} outerRadius={78} paddingAngle={2} dataKey="value">
+                        {demographics.map((item) => (
+                          <Cell key={item.name} fill={item.color} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="space-y-3">
+                  {demographics.map((item) => (
+                    <div key={item.name} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2 text-slate-300">
+                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }}></span>
+                        {item.name}
+                      </div>
+                      <span className="font-semibold text-white">{item.value}%</span>
                     </div>
-                    <span className="font-semibold text-white">{item.value}%</span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </DashboardPanel>
 
           <DashboardPanel title="Pendapatan 7 Hari Terakhir">
