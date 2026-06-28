@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { supabase } from "@/lib/supabase"
 
 type Stats = { pending: number; sent: number; failed: number }
 
@@ -51,6 +52,11 @@ function getStatusLabel(status: string) {
   return status
 }
 
+async function getToken(): Promise<string> {
+  const { data } = await supabase.auth.getSession()
+  return data.session?.access_token ?? ""
+}
+
 export default function SatuSehatPage() {
   const [statusInfo, setStatusInfo] = useState<StatusInfo | null>(null)
   const [settings, setSettings] = useState<Settings>({
@@ -70,45 +76,46 @@ export default function SatuSehatPage() {
   const [showSecret, setShowSecret] = useState(false)
 
   async function loadData() {
-    const token = localStorage.getItem("sb-token") || sessionStorage.getItem("sb-token") || ""
-    const headers = { Authorization: `Bearer ${token}` }
     try {
+      const token = await getToken()
+      const headers = { Authorization: `Bearer ${token}` }
       const [statusRes, settingsRes] = await Promise.all([
         fetch("/api/satusehat", { headers }),
         fetch("/api/satusehat/settings", { headers }),
       ])
-      const statusData = await statusRes.json() as StatusInfo
+      const statusData = await statusRes.json() as Partial<StatusInfo>
       const settingsData = await settingsRes.json() as { success: boolean; settings: Settings }
-      setStatusInfo(statusData)
-      if (settingsData.success) setSettings(settingsData.settings)
+      // Only set statusInfo if it looks like a valid StatusInfo (has connection_status)
+      if (statusData && typeof statusData.connection_status === "string") {
+        setStatusInfo({
+          enabled: statusData.enabled ?? false,
+          org_id: statusData.org_id ?? null,
+          stats: statusData.stats ?? { pending: 0, sent: 0, failed: 0 },
+          last_sync: statusData.last_sync ?? null,
+          connection_status: statusData.connection_status,
+        })
+      }
+      if (settingsData.success && settingsData.settings) {
+        setSettings(settingsData.settings)
+      }
     } catch {
-      // ignore
+      // silently handle
     } finally {
       setLoading(false)
     }
   }
 
-  async function loadQueue() {
-    const token = localStorage.getItem("sb-token") || sessionStorage.getItem("sb-token") || ""
-    try {
-      // Queue tidak ada endpoint tersendiri, tampilkan dari status saja
-      // Untuk tampilan demo kita kosongkan
-      setQueue([])
-    } catch {
-      setQueue([])
-    }
-  }
-
   useEffect(() => {
     void loadData()
-    void loadQueue()
+    setQueue([])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function handleSave() {
     setSaving(true)
     setSaveMsg(null)
-    const token = localStorage.getItem("sb-token") || sessionStorage.getItem("sb-token") || ""
     try {
+      const token = await getToken()
       const res = await fetch("/api/satusehat/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -127,8 +134,8 @@ export default function SatuSehatPage() {
   async function handleSync() {
     setSyncing(true)
     setSyncMsg(null)
-    const token = localStorage.getItem("sb-token") || sessionStorage.getItem("sb-token") || ""
     try {
+      const token = await getToken()
       const res = await fetch("/api/satusehat", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -146,8 +153,8 @@ export default function SatuSehatPage() {
   async function handleTest() {
     setTesting(true)
     setTestMsg(null)
-    const token = localStorage.getItem("sb-token") || sessionStorage.getItem("sb-token") || ""
     try {
+      const token = await getToken()
       const res = await fetch("/api/satusehat", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -169,7 +176,7 @@ export default function SatuSehatPage() {
     }
   }
 
-  const conn = statusInfo ? getConnectionLabel(statusInfo.connection_status) : getConnectionLabel("not_configured")
+  const conn = getConnectionLabel(statusInfo?.connection_status ?? "not_configured")
 
   if (loading) {
     return (
@@ -337,15 +344,15 @@ export default function SatuSehatPage() {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3">
           <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-3 text-center">
-            <div className="text-2xl font-bold text-yellow-300">{statusInfo?.stats.pending ?? 0}</div>
+            <div className="text-2xl font-bold text-yellow-300">{statusInfo?.stats?.pending ?? 0}</div>
             <div className="text-yellow-400/80 text-xs mt-0.5">Menunggu</div>
           </div>
           <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-center">
-            <div className="text-2xl font-bold text-emerald-300">{statusInfo?.stats.sent ?? 0}</div>
+            <div className="text-2xl font-bold text-emerald-300">{statusInfo?.stats?.sent ?? 0}</div>
             <div className="text-emerald-400/80 text-xs mt-0.5">Terkirim</div>
           </div>
           <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-center">
-            <div className="text-2xl font-bold text-red-300">{statusInfo?.stats.failed ?? 0}</div>
+            <div className="text-2xl font-bold text-red-300">{statusInfo?.stats?.failed ?? 0}</div>
             <div className="text-red-400/80 text-xs mt-0.5">Gagal</div>
           </div>
         </div>
