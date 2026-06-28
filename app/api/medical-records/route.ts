@@ -42,13 +42,12 @@ export async function POST(req: Request) {
 
     const body = await req.json()
     const { patient_id, doctor_id, visit_date, chief_complaint, diagnosis, treatment, prescription, notes,
-      systolic_bp, diastolic_bp, heart_rate, temperature, weight, height, booking_id } = body
+      prescription_items, systolic_bp, diastolic_bp, heart_rate, temperature, weight, height, booking_id } = body
 
     if (!patient_id || !doctor_id || !visit_date) {
       return NextResponse.json({ success: false, error: "Pasien, dokter, dan tanggal wajib diisi" }, { status: 400 })
     }
 
-    // Validasi pasien & dokter milik klinik ini
     const [patientRes, doctorRes] = await Promise.all([
       supabaseAdmin.from("patients").select("id").eq("id", patient_id).eq("clinic_id", auth.clinicId).single(),
       supabaseAdmin.from("doctors").select("id").eq("id", doctor_id).eq("clinic_id", auth.clinicId).single(),
@@ -67,6 +66,8 @@ export async function POST(req: Request) {
         diagnosis: diagnosis || null,
         treatment: treatment || null,
         prescription: prescription || null,
+        prescription_items: Array.isArray(prescription_items) ? prescription_items : [],
+        dispensed: false,
         notes: notes || null,
         systolic_bp: systolic_bp ? Number(systolic_bp) : null,
         diastolic_bp: diastolic_bp ? Number(diastolic_bp) : null,
@@ -76,7 +77,7 @@ export async function POST(req: Request) {
         height: height ? Number(height) : null,
         updated_at: new Date().toISOString(),
       }])
-      .select("*, patients(name), doctors(name, specialization)")
+      .select("*, patients(name, phone), doctors(name, specialization)")
       .single()
 
     if (error) throw error
@@ -84,6 +85,41 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, record: data })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Gagal menyimpan rekam medis"
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
+  }
+}
+
+export async function PATCH(req: Request) {
+  try {
+    const auth = await getClinicFromRequest(req)
+    if (!("clinicId" in auth)) {
+      return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
+    }
+
+    const body = await req.json()
+    const { id, dispensed } = body
+
+    if (!id) return NextResponse.json({ success: false, error: "ID wajib diisi" }, { status: 400 })
+
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    if (typeof dispensed === "boolean") {
+      updates.dispensed = dispensed
+      updates.dispensed_at = dispensed ? new Date().toISOString() : null
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("medical_records")
+      .update(updates)
+      .eq("id", id)
+      .eq("clinic_id", auth.clinicId)
+      .select("id, dispensed, dispensed_at")
+      .single()
+
+    if (error) throw error
+
+    return NextResponse.json({ success: true, record: data })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Gagal memperbarui rekam medis"
     return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }

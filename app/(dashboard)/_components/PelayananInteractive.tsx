@@ -87,6 +87,8 @@ export function PharmacyQueueWrapper() {
 // ─────────────────────────────────────────────────────────────────────────────
 type Patient = { id: string; name: string; phone?: string }
 type Doctor = { id: string; name: string; specialization?: string }
+type StockItem = { id: string; name: string; unit: string }
+type RxItem = { name: string; dose: string; frequency: string; duration: string; notes: string }
 type MedRecord = {
   id: string
   visit_date: string
@@ -94,28 +96,48 @@ type MedRecord = {
   diagnosis: string | null
   treatment: string | null
   prescription: string | null
+  prescription_items: RxItem[] | null
+  dispensed: boolean
+  dispensed_at: string | null
   notes: string | null
-  patients: { name: string } | null
-  doctors: { name: string } | null
+  patients: { name: string; phone?: string } | null
+  doctors: { name: string; specialization?: string } | null
 }
 
+const emptyRxItem = (): RxItem => ({ name: "", dose: "", frequency: "", duration: "", notes: "" })
 const emptyRxForm = {
   patient_id: "", doctor_id: "",
   visit_date: new Date().toISOString().slice(0, 10),
-  prescription: "", diagnosis: "", treatment: "",
+  diagnosis: "", treatment: "",
+}
+
+function rxItemsToText(items: RxItem[]): string {
+  return items
+    .filter((i) => i.name.trim())
+    .map((i, idx) => {
+      const parts = [i.dose, i.frequency, i.duration].filter(Boolean).join(" · ")
+      const notes = i.notes ? ` (${i.notes})` : ""
+      return `${idx + 1}. ${i.name}${parts ? `  ${parts}` : ""}${notes}`
+    })
+    .join("\n")
 }
 
 export function PrescriptionWrapper() {
   const [records, setRecords] = useState<MedRecord[]>([])
   const [patients, setPatients] = useState<Patient[]>([])
   const [doctors, setDoctors] = useState<Doctor[]>([])
+  const [stockItems, setStockItems] = useState<StockItem[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [dispensingId, setDispensingId] = useState<string | null>(null)
+  const [sendingWaId, setSendingWaId] = useState<string | null>(null)
   const [error, setError] = useState("")
   const [filterPatient, setFilterPatient] = useState("")
   const [detail, setDetail] = useState<MedRecord | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(emptyRxForm)
+  const [rxItems, setRxItems] = useState<RxItem[]>([emptyRxItem()])
+  const [suggestions, setSuggestions] = useState<string[][]>([[]])
 
   const loadData = useCallback(async (patId?: string) => {
     setLoading(true)
@@ -123,124 +145,281 @@ export function PrescriptionWrapper() {
     try {
       const token = await getToken()
       const headers = { Authorization: `Bearer ${token}` }
-      const url = `/api/medical-records${patId ? `?patient_id=${patId}` : ""}`
-      const [recRes, bookRes] = await Promise.all([
-        fetch(url, { headers }),
+      const [recRes, bookRes, stockRes] = await Promise.all([
+        fetch(`/api/medical-records${patId ? `?patient_id=${patId}` : ""}`, { headers }),
         fetch("/api/bookings", { headers }),
+        fetch("/api/stock", { headers }),
       ])
-      const [recData, bookData] = await Promise.all([recRes.json(), bookRes.json()])
+      const [recData, bookData, stockData] = await Promise.all([recRes.json(), bookRes.json(), stockRes.json()])
       if (!recRes.ok) throw new Error(recData.error)
-      // Only keep records that have a prescription
-      setRecords((recData.records as MedRecord[]).filter((r) => r.prescription?.trim()))
-      if (bookData.success) {
-        setPatients(bookData.patients ?? [])
-        setDoctors(bookData.doctors ?? [])
-      }
+      setRecords((recData.records as MedRecord[]).filter((r) => r.prescription?.trim() || (r.prescription_items?.length ?? 0) > 0))
+      if (bookData.success) { setPatients(bookData.patients ?? []); setDoctors(bookData.doctors ?? []) }
+      if (stockData.success) setStockItems(stockData.items ?? [])
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Gagal memuat data")
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }, [])
 
   useEffect(() => { loadData() }, [loadData])
 
-  const handleFilter = (patId: string) => {
-    setFilterPatient(patId)
-    loadData(patId || undefined)
+  const handleFilter = (patId: string) => { setFilterPatient(patId); loadData(patId || undefined) }
+
+  const updateItem = (idx: number, field: keyof RxItem, value: string) => {
+    setRxItems((prev) => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item))
+    if (field === "name") {
+      const q = value.toLowerCase()
+      setSuggestions((prev) => prev.map((s, i) =>
+        i === idx ? (q.length < 2 ? [] : stockItems.filter((s) => s.name.toLowerCase().includes(q)).slice(0, 6).map((s) => s.name)) : s
+      ))
+    }
   }
 
-  const f = (v: string, key: string) => setForm((prev) => ({ ...prev, [key]: v }))
+  const pickSuggestion = (idx: number, name: string) => {
+    setRxItems((prev) => prev.map((item, i) => i === idx ? { ...item, name } : item))
+    setSuggestions((prev) => prev.map((_, i) => i === idx ? [] : _))
+  }
+
+  const addItem = () => {
+    setRxItems((prev) => [...prev, emptyRxItem()])
+    setSuggestions((prev) => [...prev, []])
+  }
+
+  const removeItem = (idx: number) => {
+    setRxItems((prev) => prev.filter((_, i) => i !== idx))
+    setSuggestions((prev) => prev.filter((_, i) => i !== idx))
+  }
+
+  const openForm = () => {
+    setShowForm(true); setError(""); setDetail(null)
+    setRxItems([emptyRxItem()]); setSuggestions([[]]); setForm(emptyRxForm)
+  }
 
   const handleSave = async () => {
-    if (!form.patient_id || !form.doctor_id || !form.visit_date || !form.prescription.trim()) {
-      setError("Pasien, dokter, tanggal, dan resep wajib diisi")
+    const validItems = rxItems.filter((i) => i.name.trim())
+    if (!form.patient_id || !form.doctor_id || !form.visit_date || validItems.length === 0) {
+      setError("Pasien, dokter, tanggal, dan minimal 1 obat wajib diisi")
       return
     }
-    setSaving(true)
-    setError("")
+    setSaving(true); setError("")
     try {
       const token = await getToken()
       const res = await fetch("/api/medical-records", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, prescription_items: validItems, prescription: rxItemsToText(validItems) }),
       })
       const data = await res.json()
       if (!res.ok || !data.success) throw new Error(data.error)
       setShowForm(false)
-      setForm(emptyRxForm)
       loadData(filterPatient || undefined)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Gagal menyimpan")
-    } finally {
-      setSaving(false)
-    }
+    } finally { setSaving(false) }
   }
 
-  const handlePrint = () => window.print()
+  const handleDispense = async (record: MedRecord) => {
+    setDispensingId(record.id)
+    try {
+      const token = await getToken()
+      const res = await fetch("/api/medical-records", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id: record.id, dispensed: !record.dispensed }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.error)
+      setRecords((prev) => prev.map((r) => r.id === record.id ? { ...r, dispensed: !r.dispensed, dispensed_at: data.record.dispensed_at } : r))
+      if (detail?.id === record.id) setDetail((prev) => prev ? { ...prev, dispensed: !prev.dispensed, dispensed_at: data.record.dispensed_at } : prev)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Gagal update status")
+    } finally { setDispensingId(null) }
+  }
+
+  const handleSendWA = async (record: MedRecord) => {
+    const phone = record.patients?.phone
+    if (!phone) { setError("Nomor HP pasien tidak tersedia"); return }
+    setSendingWaId(record.id)
+    const items = (record.prescription_items?.length ?? 0) > 0
+      ? record.prescription_items!.filter((i) => i.name).map((i, idx) => {
+          const parts = [i.dose, i.frequency, i.duration].filter(Boolean).join(" · ")
+          return `${idx + 1}. *${i.name}*${parts ? `  ${parts}` : ""}${i.notes ? ` _(${i.notes})_` : ""}`
+        }).join("\n")
+      : record.prescription ?? "-"
+    const msg = `*Resep Obat Digital* 💊\n\nPasien: ${record.patients?.name ?? "-"}\nDokter: ${record.doctors?.name ?? "-"}\nTanggal: ${record.visit_date}\n${record.diagnosis ? `Diagnosa: ${record.diagnosis}\n` : ""}\n*Daftar Obat:*\n${items}\n\n_Minum obat sesuai petunjuk dokter. Hubungi klinik jika ada pertanyaan._`
+    try {
+      const token = await getToken()
+      const res = await fetch("/api/wa/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ phone, message: msg }),
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.error ?? "Gagal kirim WA")
+      setError("")
+      alert("Resep berhasil dikirim via WhatsApp!")
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Gagal kirim WA")
+    } finally { setSendingWaId(null) }
+  }
+
+  const printRecord = (r: MedRecord) => {
+    setDetail(r)
+    setTimeout(() => window.print(), 150)
+  }
 
   return (
     <div className="space-y-6">
-      <style>{`@media print { .no-print { display: none !important; } .print-only { display: block !important; } }`}</style>
+      <style>{`
+        @media print {
+          .no-print { display: none !important; }
+          .print-only { display: block !important; }
+          body { background: white !important; color: black !important; }
+          .print-rx { background: white; color: black; padding: 32px; font-family: serif; }
+          .print-rx h1 { font-size: 18px; font-weight: bold; }
+          .print-rx .rx-items { border: 1px solid #000; padding: 12px; margin: 12px 0; border-radius: 4px; }
+          .print-rx .sig { margin-top: 40px; text-align: right; }
+        }
+        .print-only { display: none; }
+      `}</style>
 
+      {/* Print Template */}
+      {detail && (
+        <div className="print-only print-rx">
+          <div style={{ borderBottom: "2px solid #000", paddingBottom: 8, marginBottom: 12 }}>
+            <h1>Resep Dokter</h1>
+            <p style={{ fontSize: 13 }}>Tanggal: {detail.visit_date}</p>
+          </div>
+          <div style={{ display: "flex", gap: 32, fontSize: 13, marginBottom: 12 }}>
+            <div><b>Pasien:</b> {detail.patients?.name ?? "—"}<br/><b>Dokter:</b> {detail.doctors?.name ?? "—"}{detail.doctors?.specialization ? ` (${detail.doctors.specialization})` : ""}</div>
+          </div>
+          {detail.diagnosis && <p style={{ fontSize: 13, marginBottom: 8 }}><b>Diagnosa:</b> {detail.diagnosis}</p>}
+          <div className="rx-items">
+            <p style={{ fontWeight: "bold", marginBottom: 6 }}>R/</p>
+            {(detail.prescription_items?.length ?? 0) > 0
+              ? detail.prescription_items!.filter((i) => i.name).map((item, idx) => (
+                  <p key={idx} style={{ marginBottom: 4, fontSize: 13 }}>
+                    {idx + 1}. <b>{item.name}</b> {item.dose} — {item.frequency}{item.duration ? ` selama ${item.duration}` : ""}{item.notes ? ` (${item.notes})` : ""}
+                  </p>
+                ))
+              : <pre style={{ fontSize: 13, whiteSpace: "pre-wrap" }}>{detail.prescription}</pre>
+            }
+          </div>
+          <div className="sig">
+            <p style={{ fontSize: 13 }}>Hormat,</p>
+            <div style={{ height: 48 }} />
+            <p style={{ fontSize: 13, borderTop: "1px solid #000", paddingTop: 4 }}>{detail.doctors?.name ?? "Dokter"}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Header */}
       <div className="no-print flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-indigo-400">Pelayanan</p>
           <h1 className="mt-1 text-2xl font-bold text-white">E-Resep</h1>
         </div>
-        <button onClick={() => { setShowForm(true); setError(""); setDetail(null) }} className="btn-primary text-sm no-print">
-          + Tambah Resep
-        </button>
+        <button onClick={openForm} className="btn-primary text-sm">+ Tulis Resep Baru</button>
       </div>
 
       {error && <div className="no-print rounded-2xl border border-red-700/30 bg-red-950/30 p-4 text-sm text-red-300">{error}</div>}
 
-      <div className="no-print flex gap-3">
-        <select value={filterPatient} onChange={(e) => handleFilter(e.target.value)} className="input">
+      {/* Filter */}
+      <div className="no-print">
+        <select value={filterPatient} onChange={(e) => handleFilter(e.target.value)} className="input max-w-xs">
           <option value="">Semua Pasien</option>
           {patients.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
       </div>
 
+      {/* Form */}
       {showForm && (
-        <div className="no-print rounded-3xl border border-indigo-500/30 bg-indigo-950/20 p-6 space-y-4">
+        <div className="no-print rounded-3xl border border-indigo-500/30 bg-indigo-950/20 p-6 space-y-5">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-white">Tambah Resep Baru</h2>
-            <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-white">✕</button>
+            <h2 className="font-semibold text-white">Tulis Resep Baru</h2>
+            <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-white text-xl">✕</button>
           </div>
+
           <div className="grid gap-4 md:grid-cols-3">
             <div>
               <label className="label">Pasien</label>
-              <select value={form.patient_id} onChange={(e) => f(e.target.value, "patient_id")} className="input">
+              <select value={form.patient_id} onChange={(e) => setForm((p) => ({ ...p, patient_id: e.target.value }))} className="input">
                 <option value="">Pilih Pasien</option>
                 {patients.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
             <div>
               <label className="label">Dokter</label>
-              <select value={form.doctor_id} onChange={(e) => f(e.target.value, "doctor_id")} className="input">
+              <select value={form.doctor_id} onChange={(e) => setForm((p) => ({ ...p, doctor_id: e.target.value }))} className="input">
                 <option value="">Pilih Dokter</option>
                 {doctors.map((d) => <option key={d.id} value={d.id}>{d.name}{d.specialization ? ` — ${d.specialization}` : ""}</option>)}
               </select>
             </div>
             <div>
               <label className="label">Tanggal</label>
-              <input type="date" value={form.visit_date} onChange={(e) => f(e.target.value, "visit_date")} className="input" />
+              <input type="date" value={form.visit_date} onChange={(e) => setForm((p) => ({ ...p, visit_date: e.target.value }))} className="input" />
             </div>
           </div>
-          <div>
-            <label className="label">Diagnosis</label>
-            <textarea value={form.diagnosis} onChange={(e) => f(e.target.value, "diagnosis")} rows={2} className="input resize-none" placeholder="Diagnosis dokter..." />
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="label">Diagnosis</label>
+              <textarea value={form.diagnosis} onChange={(e) => setForm((p) => ({ ...p, diagnosis: e.target.value }))} rows={2} className="input resize-none" placeholder="Diagnosis dokter..." />
+            </div>
+            <div>
+              <label className="label">Tindakan</label>
+              <textarea value={form.treatment} onChange={(e) => setForm((p) => ({ ...p, treatment: e.target.value }))} rows={2} className="input resize-none" placeholder="Tindakan yang dilakukan..." />
+            </div>
           </div>
+
+          {/* Structured Rx Items */}
           <div>
-            <label className="label">Tindakan</label>
-            <textarea value={form.treatment} onChange={(e) => f(e.target.value, "treatment")} rows={2} className="input resize-none" placeholder="Tindakan yang dilakukan..." />
+            <div className="mb-2 flex items-center justify-between">
+              <label className="label mb-0">Daftar Obat</label>
+              <button onClick={addItem} className="text-xs text-indigo-400 hover:text-indigo-300">+ Tambah Obat</button>
+            </div>
+            <div className="space-y-3">
+              {rxItems.map((item, idx) => (
+                <div key={idx} className="relative rounded-2xl border border-slate-700/30 bg-slate-900/30 p-4">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-indigo-400">Obat {idx + 1}</span>
+                    {rxItems.length > 1 && (
+                      <button onClick={() => removeItem(idx)} className="text-xs text-rose-400 hover:text-rose-300">Hapus</button>
+                    )}
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-5">
+                    {/* Name with autocomplete */}
+                    <div className="relative md:col-span-2">
+                      <input
+                        type="text"
+                        value={item.name}
+                        onChange={(e) => updateItem(idx, "name", e.target.value)}
+                        onBlur={() => setTimeout(() => setSuggestions((prev) => prev.map((s, i) => i === idx ? [] : s)), 150)}
+                        className="input"
+                        placeholder="Nama obat..."
+                      />
+                      {suggestions[idx]?.length > 0 && (
+                        <div className="absolute z-10 mt-1 w-full rounded-xl border border-slate-700/50 bg-slate-800 shadow-xl">
+                          {suggestions[idx].map((s) => (
+                            <button key={s} onMouseDown={() => pickSuggestion(idx, s)}
+                              className="w-full px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-700/50 first:rounded-t-xl last:rounded-b-xl">
+                              {s}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <input type="text" value={item.dose} onChange={(e) => updateItem(idx, "dose", e.target.value)} className="input" placeholder="Dosis (500mg)" />
+                    <input type="text" value={item.frequency} onChange={(e) => updateItem(idx, "frequency", e.target.value)} className="input" placeholder="Frekuensi (3x1)" />
+                    <input type="text" value={item.duration} onChange={(e) => updateItem(idx, "duration", e.target.value)} className="input" placeholder="Durasi (7 hari)" />
+                  </div>
+                  <div className="mt-2">
+                    <input type="text" value={item.notes} onChange={(e) => updateItem(idx, "notes", e.target.value)} className="input" placeholder="Catatan (setelah makan, bila perlu...)" />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div>
-            <label className="label">Resep Obat</label>
-            <textarea value={form.prescription} onChange={(e) => f(e.target.value, "prescription")} rows={4} className="input resize-none" placeholder="Contoh:&#10;1. Amoxicillin 500mg 3x1 (7 hari)&#10;2. Paracetamol 500mg 3x1 (bila perlu)" />
-          </div>
+
           <div className="flex gap-3">
             <button onClick={handleSave} disabled={saving} className="btn-primary text-sm">
               {saving ? "Menyimpan..." : "Simpan Resep"}
@@ -250,61 +429,96 @@ export function PrescriptionWrapper() {
         </div>
       )}
 
+      {/* Detail Panel */}
       {detail && (
-        <div className="rounded-3xl border border-slate-700/30 bg-gradient-to-br from-slate-800/50 to-slate-900/50 p-6 space-y-4">
-          <div className="flex items-center justify-between no-print">
+        <div className="no-print rounded-3xl border border-slate-700/30 bg-gradient-to-br from-slate-800/50 to-slate-900/50 p-6 space-y-4">
+          <div className="flex items-center justify-between">
             <h2 className="font-semibold text-white">Detail Resep</h2>
             <div className="flex gap-2">
-              <button onClick={handlePrint} className="rounded-xl border border-indigo-700/30 bg-indigo-950/30 px-3 py-1.5 text-xs text-indigo-300 hover:bg-indigo-900/40">
-                Cetak Resep
+              <button onClick={() => printRecord(detail)}
+                className="rounded-xl border border-slate-600/30 bg-slate-800/50 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700/50">
+                🖨 Cetak
               </button>
-              <button onClick={() => setDetail(null)} className="text-slate-400 hover:text-white">✕</button>
+              <button
+                onClick={() => handleSendWA(detail)}
+                disabled={sendingWaId === detail.id || !detail.patients?.phone}
+                className="rounded-xl border border-emerald-700/30 bg-emerald-950/30 px-3 py-1.5 text-xs text-emerald-300 hover:bg-emerald-900/40 disabled:opacity-40">
+                {sendingWaId === detail.id ? "Mengirim..." : "📲 Kirim WA"}
+              </button>
+              <button
+                onClick={() => handleDispense(detail)}
+                disabled={dispensingId === detail.id}
+                className={`rounded-xl border px-3 py-1.5 text-xs transition ${
+                  detail.dispensed
+                    ? "border-indigo-700/30 bg-indigo-950/30 text-indigo-300 hover:bg-indigo-900/40"
+                    : "border-amber-700/30 bg-amber-950/30 text-amber-300 hover:bg-amber-900/40"
+                }`}>
+                {dispensingId === detail.id ? "..." : detail.dispensed ? "✓ Sudah Ditebus" : "Tandai Ditebus"}
+              </button>
+              <button onClick={() => setDetail(null)} className="text-slate-400 hover:text-white text-lg">✕</button>
             </div>
           </div>
+
           <div className="grid gap-3 text-sm md:grid-cols-3">
             <p><span className="text-slate-400">Pasien:</span> <span className="text-white font-medium">{detail.patients?.name ?? "—"}</span></p>
             <p><span className="text-slate-400">Dokter:</span> <span className="text-white">{detail.doctors?.name ?? "—"}</span></p>
             <p><span className="text-slate-400">Tanggal:</span> <span className="text-white">{detail.visit_date}</span></p>
           </div>
-          {detail.diagnosis && (
-            <div>
-              <p className="text-xs text-slate-400 mb-1">Diagnosis</p>
-              <p className="text-white text-sm">{detail.diagnosis}</p>
-            </div>
-          )}
-          {detail.treatment && (
-            <div>
-              <p className="text-xs text-slate-400 mb-1">Tindakan</p>
-              <p className="text-white text-sm">{detail.treatment}</p>
-            </div>
-          )}
+
+          {detail.diagnosis && <div><p className="text-xs text-slate-400 mb-1">Diagnosis</p><p className="text-white text-sm">{detail.diagnosis}</p></div>}
+
           <div>
-            <p className="text-xs text-slate-400 mb-2">Resep Obat</p>
-            <pre className="rounded-2xl bg-slate-900/60 border border-slate-700/20 p-4 text-sm text-indigo-100 whitespace-pre-wrap font-mono">
-              {detail.prescription}
-            </pre>
+            <p className="text-xs text-slate-400 mb-2">Daftar Obat</p>
+            {(detail.prescription_items?.length ?? 0) > 0 ? (
+              <div className="space-y-2">
+                {detail.prescription_items!.filter((i) => i.name).map((item, idx) => (
+                  <div key={idx} className="flex items-start gap-3 rounded-xl border border-slate-700/20 bg-slate-900/30 px-4 py-3">
+                    <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600/20 text-xs font-bold text-indigo-300">{idx + 1}</span>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-white">{item.name}</p>
+                      <p className="text-xs text-slate-400">{[item.dose, item.frequency, item.duration].filter(Boolean).join(" · ")}{item.notes ? ` — ${item.notes}` : ""}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <pre className="rounded-2xl bg-slate-900/60 border border-slate-700/20 p-4 text-sm text-indigo-100 whitespace-pre-wrap font-mono">{detail.prescription}</pre>
+            )}
           </div>
+
+          {detail.dispensed && detail.dispensed_at && (
+            <p className="text-xs text-emerald-400">✓ Ditebus pada {new Date(detail.dispensed_at).toLocaleString("id-ID")}</p>
+          )}
         </div>
       )}
 
-      <div className="rounded-3xl border border-slate-700/20 bg-gradient-to-br from-slate-800/30 to-slate-900/20 overflow-hidden no-print">
-        <div className="border-b border-slate-700/20 p-5">
+      {/* List */}
+      <div className="no-print rounded-3xl border border-slate-700/20 bg-gradient-to-br from-slate-800/30 to-slate-900/20 overflow-hidden">
+        <div className="border-b border-slate-700/20 px-5 py-4">
           <h2 className="font-semibold text-white">Daftar E-Resep</h2>
         </div>
         {loading ? (
           <div className="flex h-32 items-center justify-center text-slate-400 text-sm">Memuat data...</div>
         ) : records.length === 0 ? (
-          <div className="flex h-32 items-center justify-center text-slate-500 text-sm">Belum ada resep</div>
+          <div className="flex h-32 flex-col items-center justify-center gap-2 text-center">
+            <span className="text-2xl opacity-30">💊</span>
+            <p className="text-sm text-slate-500">Belum ada resep. Klik &quot;Tulis Resep Baru&quot; untuk memulai.</p>
+          </div>
         ) : (
           <div className="divide-y divide-slate-700/10">
             {records.map((r) => (
               <button key={r.id} onClick={() => { setDetail(r); setShowForm(false) }}
-                className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-slate-800/20 transition">
-                <div>
+                className="w-full flex items-center justify-between px-5 py-3.5 text-left hover:bg-slate-800/20 transition">
+                <div className="min-w-0">
                   <p className="font-medium text-white">{r.patients?.name ?? "—"}</p>
                   <p className="text-xs text-slate-500">{r.doctors?.name} · {r.visit_date}</p>
                 </div>
-                <p className="text-xs text-slate-400 max-w-xs truncate">{r.prescription}</p>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${r.dispensed ? "bg-emerald-900/40 text-emerald-300" : "bg-amber-900/40 text-amber-300"}`}>
+                    {r.dispensed ? "Ditebus" : "Belum Ditebus"}
+                  </span>
+                  <span className="text-xs text-slate-500">{(r.prescription_items?.filter(i => i.name).length ?? 0)} obat</span>
+                </div>
               </button>
             ))}
           </div>
