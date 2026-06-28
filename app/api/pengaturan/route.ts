@@ -4,26 +4,33 @@ import { getClinicFromRequest } from "@/lib/getClinicFromRequest"
 
 export const runtime = "nodejs"
 
-export async function GET(req: Request) {
-  try {
-    const auth = await getClinicFromRequest(req)
-    if (!("clinicId" in auth)) {
-      return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
-    }
+const CLINIC_SELECT = "id, name, address, phone, email, slug, logo_url, online_booking_enabled, plan, subscription_status, trial_ends_at, current_period_end"
 
-    const { data: clinic, error } = await supabaseAdmin
-      .from("clinics")
-      .select("id, name, address, phone, email, slug, logo_url, online_booking_enabled, plan, subscription_status, trial_ends_at, current_period_end")
-      .eq("id", auth.clinicId)
-      .single()
-
-    if (error) throw error
-
-    return NextResponse.json({ success: true, clinic })
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Gagal mengambil pengaturan"
-    return NextResponse.json({ success: false, error: message }, { status: 500 })
+function errMsg(err: unknown, fallback: string): string {
+  if (err instanceof Error) return err.message
+  if (typeof err === "object" && err !== null && "message" in err) {
+    return String((err as { message: unknown }).message)
   }
+  return fallback
+}
+
+export async function GET(req: Request) {
+  const auth = await getClinicFromRequest(req)
+  if (!("clinicId" in auth)) {
+    return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
+  }
+
+  const { data: clinic, error } = await supabaseAdmin
+    .from("clinics")
+    .select(CLINIC_SELECT)
+    .eq("id", auth.clinicId)
+    .single()
+
+  if (error) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true, clinic })
 }
 
 export async function PATCH(req: Request) {
@@ -33,27 +40,40 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
     }
 
-    const body = await req.json()
+    const body = await req.json() as Record<string, unknown>
     const { name, address, phone, email } = body
 
-    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
-    if (name !== undefined) updates.name = name
-    if (address !== undefined) updates.address = address
-    if (phone !== undefined) updates.phone = phone
-    if (email !== undefined) updates.email = email
+    const updates: Record<string, unknown> = {}
+    if (typeof name === "string") updates.name = name
+    if (typeof address === "string") updates.address = address
+    if (typeof phone === "string") updates.phone = phone
+    if (typeof email === "string") updates.email = email
 
-    const { data, error } = await supabaseAdmin
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ success: false, error: "Tidak ada perubahan untuk disimpan" }, { status: 400 })
+    }
+
+    const { error: updateError } = await supabaseAdmin
       .from("clinics")
       .update(updates)
       .eq("id", auth.clinicId)
-      .select("id, name, address, phone, email, slug, logo_url, online_booking_enabled, plan, subscription_status, trial_ends_at, current_period_end")
+
+    if (updateError) {
+      return NextResponse.json({ success: false, error: updateError.message }, { status: 500 })
+    }
+
+    const { data: clinic, error: fetchError } = await supabaseAdmin
+      .from("clinics")
+      .select(CLINIC_SELECT)
+      .eq("id", auth.clinicId)
       .single()
 
-    if (error) throw error
+    if (fetchError) {
+      return NextResponse.json({ success: false, error: fetchError.message }, { status: 500 })
+    }
 
-    return NextResponse.json({ success: true, clinic: data })
+    return NextResponse.json({ success: true, clinic })
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Gagal menyimpan pengaturan"
-    return NextResponse.json({ success: false, error: message }, { status: 500 })
+    return NextResponse.json({ success: false, error: errMsg(err, "Gagal menyimpan pengaturan") }, { status: 500 })
   }
 }
