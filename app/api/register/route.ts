@@ -154,6 +154,7 @@ export async function POST(req: Request) {
 
   let step = "init"
   let createdUserId: string | null = null
+  let createdClinicId: string | null = null
   let envCheck: SupabaseEnvCheck | undefined
 
   try {
@@ -222,9 +223,10 @@ export async function POST(req: Request) {
     step = "create_auth_user"
     // Direct fetch to Supabase Auth Admin API — bypasses supabase-js URL construction
     // which caused "Invalid path specified in request URL" on some Vercel deployments
-    const rawSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ""
-    const supabaseBase = rawSupabaseUrl.replace(/\s+/g, "").replace(/\/+$/, "")
+    const rawSupabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\s+/g, "").replace(/^["'`]+|["'`]+$/g, "")
+    const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY ?? "").trim()
+    let supabaseBase: string
+    try { supabaseBase = new URL(rawSupabaseUrl).origin } catch { supabaseBase = rawSupabaseUrl.replace(/\/+$/, "") }
     const authAdminUrl = `${supabaseBase}/auth/v1/admin/users`
 
     const authRes = await fetch(authAdminUrl, {
@@ -242,27 +244,29 @@ export async function POST(req: Request) {
       }),
     })
 
-    type AuthUser = { id: string; email: string }
-    type AuthResponse = { id?: string; email?: string; msg?: string; message?: string; error_description?: string }
+    type AuthResponse = { id?: string; email?: string; msg?: string; message?: string; error?: string; error_description?: string }
     const authJson = await authRes.json() as AuthResponse
 
     if (!authRes.ok || !authJson.id) {
-      const msg = (authJson.msg ?? authJson.message ?? authJson.error_description ?? "").toLowerCase()
+      const errText = authJson.error_description ?? authJson.error ?? authJson.msg ?? authJson.message ?? ""
+      const msg = errText.toLowerCase()
       if (msg.includes("already") || msg.includes("exist") || authRes.status === 422) {
-        logRegisterError(step, new Error(msg))
+        logRegisterError(step, new Error(errText))
         return errorResponse("Email sudah terdaftar. Silakan login atau gunakan email lain.", 409, "EMAIL_EXISTS")
       }
-      throw new Error(authJson.msg ?? authJson.message ?? `Auth API ${authRes.status}`)
+      throw new Error(errText || `Auth API ${authRes.status}`)
     }
 
-    const user: AuthUser = { id: authJson.id, email: authJson.email ?? email }
+    const user = { id: authJson.id as string, email: authJson.email ?? email }
     createdUserId = user.id
 
     step = "create_clinic"
     const clinic = await createClinic(clinicName, email, plan)
+    createdClinicId = clinic.id
 
     step = "create_profile"
     await createProfile(user.id, clinic.id, email)
+    createdClinicId = null // profile berhasil — clinic tidak perlu di-rollback
 
     step = "record_trial"
     await recordTrialEvent(clinic.id, plan, email)
@@ -274,6 +278,11 @@ export async function POST(req: Request) {
       await supabaseAdmin.auth.admin.deleteUser(createdUserId).catch((cleanupError) => {
         logRegisterError("cleanup_auth_user", cleanupError)
       })
+    }
+    // Hapus clinic orphan jika profile gagal dibuat
+    if (createdClinicId) {
+      const { error: clinicCleanupErr } = await supabaseAdmin.from("clinics").delete().eq("id", createdClinicId)
+      if (clinicCleanupErr) logRegisterError("cleanup_clinic", clinicCleanupErr)
     }
 
     const rawMessage = err instanceof Error ? err.message : ""
