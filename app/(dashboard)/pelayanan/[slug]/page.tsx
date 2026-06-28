@@ -17,38 +17,18 @@ export default async function PelayananPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
+
+  // Handle specific slugs FIRST before menu lookup (some slugs aren't in menu)
+  if (slug === "rekam-medis-elektronik") return <MedicalRecordsWrapper />
+  if (slug === "antrian-poli") return <QueueWrapper />
+  if (slug === "antrian-loket") return <CounterQueueWrapper />
+  if (slug === "antrian-apotek") return <PharmacyQueueWrapper />
+  if (slug === "laboratorium") return <LaboratoryWrapper />
+  if (slug === "e-resep") return <PrescriptionWrapper />
+  if (slug === "rawat-jalan-poliklinik") return <OutpatientPolyclinicWrapper />
+
   const item = findMenuItemBySlug("pelayanan", slug)
-
   if (!item) notFound()
-
-  // Special handling for premium features - show actual implementation
-  if (slug === "rekam-medis-elektronik") {
-    return <MedicalRecordsWrapper />
-  }
-
-  if (slug === "antrian-poli") {
-    return <QueueWrapper />
-  }
-
-  if (slug === "antrian-loket") {
-    return <CounterQueueWrapper />
-  }
-
-  if (slug === "antrian-apotek") {
-    return <PharmacyQueueWrapper />
-  }
-
-  if (slug === "laboratorium") {
-    return <LaboratoryWrapper />
-  }
-
-  if (slug === "e-resep") {
-    return <PrescriptionWrapper />
-  }
-
-  if (slug === "rawat-jalan-poliklinik") {
-    return <OutpatientPolyclinicWrapper />
-  }
 
   return <ModulePlaceholder section="Pelayanan" item={item} />
 }

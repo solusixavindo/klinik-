@@ -10,6 +10,16 @@ import { hasPlanFeature, PlanCode } from "@/lib/billing"
 const getToken = async () =>
   (await supabase.auth.getSession()).data.session?.access_token
 
+type QueueEntry = {
+  id: string
+  queue_number: number
+  status: string
+  patient_id: string
+  doctor_id: string | null
+  patients: { name: string } | null
+  doctors: { name: string } | null
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // PLACEHOLDER wrappers (kept for backward compatibility / non-implemented slugs)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -61,26 +71,115 @@ export function QueueWrapper() {
   )
 }
 
-export function CounterQueueWrapper() {
+function SubQueueView({ title, icon, type }: { title: string; icon: string; type: string }) {
+  const today = new Date().toISOString().slice(0, 10)
+  const [queue, setQueue] = useState<QueueEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const [calling, setCalling] = useState<string | null>(null)
+  const [currentNumber, setCurrentNumber] = useState<number | null>(null)
+
+  const load = useCallback(async () => {
+    try {
+      const token = await getToken()
+      const res = await fetch(`/api/queue?type=${type}&date=${today}`, { headers: { Authorization: `Bearer ${token}` } })
+      const data = await res.json()
+      if (data.success) {
+        setQueue(data.queue ?? [])
+        const serving = (data.queue ?? []).find((q: QueueEntry) => q.status === "serving")
+        setCurrentNumber(serving?.queue_number ?? null)
+      }
+    } catch {
+      setError("Gagal memuat antrian")
+    } finally {
+      setLoading(false)
+    }
+  }, [today, type])
+
+  useEffect(() => { load() }, [load])
+
+  const callNext = async () => {
+    const waiting = queue.filter((q) => q.status === "waiting").sort((a, b) => a.queue_number - b.queue_number)
+    if (!waiting.length) return
+    const next = waiting[0]
+    setCalling(next.id)
+    try {
+      const token = await getToken()
+      await fetch("/api/queue", {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ id: next.id, status: "called" }),
+      })
+      await load()
+    } finally {
+      setCalling(null)
+    }
+  }
+
+  const waiting = queue.filter((q) => q.status === "waiting").length
+  const serving = queue.filter((q) => q.status === "serving").length
+  const done = queue.filter((q) => q.status === "done" || q.status === "paid").length
+
   return (
     <div className="space-y-6">
-      <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-indigo-400">Pelayanan</p>
-        <h1 className="mt-2 text-3xl font-bold text-white">Antrian Loket</h1>
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest text-indigo-400">Pelayanan</p>
+          <h1 className="mt-1 text-2xl font-bold text-white">{icon} {title}</h1>
+        </div>
+        <button onClick={callNext} disabled={!!calling || waiting === 0}
+          className="rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-40 transition">
+          {calling ? "Memanggil…" : "Panggil Berikutnya"}
+        </button>
       </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        {[{ label: "Menunggu", val: waiting, color: "text-amber-400" }, { label: "Dilayani", val: serving, color: "text-sky-400" }, { label: "Selesai", val: done, color: "text-emerald-400" }].map((s) => (
+          <div key={s.label} className="rounded-2xl border border-slate-700/20 bg-slate-800/30 p-4 text-center">
+            <p className={`text-2xl font-bold ${s.color}`}>{s.val}</p>
+            <p className="mt-1 text-xs text-slate-400">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {currentNumber !== null && (
+        <div className="rounded-2xl border border-sky-500/20 bg-sky-950/20 p-4 text-center">
+          <p className="text-xs text-slate-400">Sedang Dilayani</p>
+          <p className="mt-1 text-4xl font-bold text-sky-300">{String(currentNumber).padStart(3, "0")}</p>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex justify-center py-8"><div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-700 border-t-indigo-500" /></div>
+      ) : error ? (
+        <p className="text-center text-sm text-rose-400">{error}</p>
+      ) : queue.length === 0 ? (
+        <p className="py-8 text-center text-slate-500">Belum ada antrian hari ini</p>
+      ) : (
+        <div className="space-y-2">
+          {queue.filter((q) => q.status !== "done" && q.status !== "paid").map((q) => (
+            <div key={q.id} className="flex items-center justify-between rounded-xl border border-slate-700/20 bg-slate-800/30 px-4 py-3">
+              <div className="flex items-center gap-3">
+                <span className="text-lg font-bold text-slate-200">{String(q.queue_number).padStart(3, "0")}</span>
+                <span className="text-sm text-slate-300">{q.patients?.name || "Pasien"}</span>
+              </div>
+              <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${q.status === "serving" ? "bg-sky-900/40 text-sky-300" : q.status === "called" ? "bg-amber-900/40 text-amber-300" : "bg-slate-700/40 text-slate-400"}`}>
+                {q.status === "serving" ? "Dilayani" : q.status === "called" ? "Dipanggil" : "Menunggu"}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
 
+export function CounterQueueWrapper() {
+  return <SubQueueView title="Antrian Loket" icon="🎫" type="loket" />
+}
+
 export function PharmacyQueueWrapper() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-indigo-400">Pelayanan</p>
-        <h1 className="mt-2 text-3xl font-bold text-white">Antrian Apotek</h1>
-      </div>
-    </div>
-  )
+  return <SubQueueView title="Antrian Apotek" icon="💊" type="apotek" />
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -583,16 +682,6 @@ type Booking = {
   patients: { id: string; name: string } | null
   doctors: { id: string; name: string } | null
 }
-type QueueEntry = {
-  id: string
-  queue_number: number
-  status: string
-  patient_id: string
-  doctor_id: string | null
-  patients: { name: string } | null
-  doctors: { name: string } | null
-}
-
 export function OutpatientPolyclinicWrapper() {
   const today = new Date().toISOString().slice(0, 10)
   const [date, setDate] = useState(today)

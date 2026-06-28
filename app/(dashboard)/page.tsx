@@ -416,7 +416,7 @@ export default function DashboardPage() {
       delta: lowStockCount > 0 ? "perlu restock segera" : "semua stok aman",
       deltaLabel: "",
       Icon: PackageOpen,
-      href: "/stok",
+      href: "/operasional/stok-obat",
       deltaColor: lowStockCount > 0 ? "text-rose-400" : "text-emerald-400",
       cardBg: lowStockCount > 0 ? "from-rose-950/40 to-slate-900/30 border-rose-700/20" : "from-slate-800/40 to-slate-900/30 border-slate-700/20",
       iconBg: lowStockCount > 0 ? "bg-rose-600/15 text-rose-300" : "bg-slate-600/15 text-slate-300",
