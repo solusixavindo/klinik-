@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client"
 
 import { Toaster } from "sonner"
@@ -23,6 +24,11 @@ type Subscription = {
   is_active?: boolean
 }
 
+type ClinicInfo = {
+  name: string
+  logo_url: string | null
+}
+
 export default function Layout({
   children,
 }: {
@@ -39,6 +45,7 @@ export default function Layout({
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [subscriptionLoading, setSubscriptionLoading] = useState(true)
   const [subscriptionError, setSubscriptionError] = useState<string | null>(null)
+  const [clinicInfo, setClinicInfo] = useState<ClinicInfo | null>(null)
 
   const isActive = (href: string) => href === "/" ? pathname === "/" : pathname.startsWith(href)
 
@@ -161,6 +168,27 @@ export default function Layout({
     }
   }, [authenticated])
 
+  useEffect(() => {
+    if (authenticated !== true) return
+    const fetchClinicInfo = async () => {
+      const token = (await supabase.auth.getSession()).data.session?.access_token
+      if (!token) return
+      try {
+        const res = await fetch("/api/pengaturan", {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        })
+        const data = await res.json() as { success?: boolean; clinic?: { name: string; logo_url?: string | null } }
+        if (data.success && data.clinic) {
+          setClinicInfo({ name: data.clinic.name, logo_url: data.clinic.logo_url ?? null })
+        }
+      } catch {
+        // silently fail — clinic info is optional display
+      }
+    }
+    fetchClinicInfo()
+  }, [authenticated, pathname])
+
   const toggleTheme = () => {
     const nextTheme = theme === "dark" ? "light" : "dark"
     setTheme(nextTheme)
@@ -193,10 +221,14 @@ export default function Layout({
       <div className="theme-mobile-header lg:hidden sticky top-0 z-40 border-b border-slate-700/20 bg-slate-900/60 backdrop-blur-xl px-4 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center font-bold text-white">
-              X
-            </div>
-            <span className="font-semibold text-slate-100">XaviKlinika</span>
+            {clinicInfo?.logo_url ? (
+              <img src={clinicInfo.logo_url} alt={clinicInfo.name} className="h-10 w-10 rounded-2xl object-cover border border-slate-700/40" />
+            ) : (
+              <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center font-bold text-white">
+                {(clinicInfo?.name || "X").trim().slice(0, 1).toUpperCase()}
+              </div>
+            )}
+            <span className="font-semibold text-slate-100">{clinicInfo?.name || "XaviKlinika"}</span>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={toggleTheme} className="theme-toggle p-2 rounded-xl" aria-label="Ganti tema">
@@ -266,15 +298,21 @@ export default function Layout({
           {/* Sidebar */}
           <aside className="theme-sidebar hidden lg:flex max-h-[calc(100vh-64px)] flex-col rounded-3xl border border-slate-700/20 bg-gradient-to-b from-slate-800/40 to-slate-900/40 backdrop-blur-xl p-6 shadow-lg sticky top-8">
             <div className="flex items-start gap-3 pb-6 border-b border-slate-700/20 mb-8">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 shadow-lg shadow-indigo-600/20">
-                <span className="text-xl font-bold text-white">X</span>
-              </div>
+              {clinicInfo?.logo_url ? (
+                <img src={clinicInfo.logo_url} alt={clinicInfo.name} className="h-14 w-14 rounded-2xl object-cover border border-slate-700/40 shrink-0" />
+              ) : (
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 shadow-lg shadow-indigo-600/20">
+                  <span className="text-xl font-bold text-white">
+                    {(clinicInfo?.name || "X").trim().slice(0, 1).toUpperCase()}
+                  </span>
+                </div>
+              )}
               <div className="flex-1">
                 <p className="text-xs uppercase tracking-widest text-indigo-400 font-semibold">
-                  XaviKlinika
+                  {clinicInfo?.name || "XaviKlinika"}
                 </p>
                 <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <h1 className="text-lg font-bold text-white">{subscription?.plan.name || "XaviKlinika"}</h1>
+                  <h1 className="text-lg font-bold text-white">{clinicInfo?.name || subscription?.plan.name || "XaviKlinika"}</h1>
                   {subscription?.plan.name && (
                     <span className="rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-200">
                       {subscription.plan.name}
