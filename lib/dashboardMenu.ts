@@ -47,7 +47,7 @@ export const dashboardMenuGroups: DashboardMenuGroup[] = [
       { href: "/pendaftaran/bpjs", label: "Pendaftaran BPJS", icon: "▥", description: "Registrasi pasien BPJS sederhana untuk paket Standard", requiredFeature: "bpjs_registration" },
       { href: "/pendaftaran/private-booking-online", label: "Private Booking Online", icon: "◈", description: "Booking khusus untuk pasien privat", requiredFeature: "online_booking" },
       { href: "/pendaftaran/mandiri-e-kios", label: "Pendaftaran Mandiri (E-Kios)", icon: "▣", description: "Alur registrasi pasien mandiri", requiredFeature: "online_booking" },
-      { href: "/pendaftaran/lab-radiologi", label: "Pendaftaran Lab & Radiologi", icon: "◇", description: "Registrasi pemeriksaan penunjang", requiredFeature: "online_booking" },
+      { href: "/pendaftaran/lab-radiologi", label: "Pendaftaran Lab & Radiologi", icon: "◇", description: "Registrasi pemeriksaan penunjang", requiredFeature: "inventory_management" },
     ],
   },
   {
