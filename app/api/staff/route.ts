@@ -22,13 +22,15 @@ export async function GET(req: Request) {
 
     if (error) throw error
 
-    // Ambil email dari auth.users
+    // Ambil email dari auth.users (parallel, bukan N+1 sequential)
     const ids = (profiles ?? []).map((p) => p.id)
     const emailMap: Record<string, string> = {}
-    for (const id of ids) {
-      const { data: u } = await supabaseAdmin.auth.admin.getUserById(id)
-      if (u?.user?.email) emailMap[id] = u.user.email
-    }
+    await Promise.all(
+      ids.map(async (id) => {
+        const { data: u } = await supabaseAdmin.auth.admin.getUserById(id)
+        if (u?.user?.email) emailMap[id] = u.user.email
+      })
+    )
 
     const staff = (profiles ?? []).map((p) => ({
       id: p.id,

@@ -6,6 +6,9 @@ import { supabase } from "@/lib/supabase"
 import { useProfile } from "@/hooks/useProfile"
 import { getDemoSession } from "@/lib/demoSession"
 import { demoDoctors } from "@/lib/demoData"
+import { ConfirmDialog } from "@/app/(dashboard)/_components/ConfirmDialog"
+import { SkeletonCard } from "@/app/(dashboard)/_components/Skeleton"
+import { toast } from "sonner"
 
 type Doctor = {
   id: string
@@ -32,6 +35,7 @@ export default function DoctorsPage() {
   const [editId, setEditId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
+  const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onOk: () => void } | null>(null)
 
   const fetchData = useCallback(async () => {
     if (!profile) return
@@ -48,7 +52,7 @@ export default function DoctorsPage() {
     const { data: doctorsData, error } = await query
     if (error) {
       console.error("Doctors fetch failed", error)
-      alert(error.message)
+      toast.error(error.message)
     }
 
     setData(doctorsData || [])
@@ -61,12 +65,12 @@ export default function DoctorsPage() {
 
   const submit = async () => {
     if (!form.name || !form.specialization) {
-      alert("Nama dokter dan spesialisasi wajib diisi")
+      toast.error("Nama dokter dan spesialisasi wajib diisi")
       return
     }
 
     if (!profile?.clinic_id) {
-      alert("Data klinik belum tersedia. Silakan login ulang.")
+      toast.error("Data klinik belum tersedia. Silakan login ulang.")
       return
     }
 
@@ -101,7 +105,7 @@ export default function DoctorsPage() {
     setSaving(false)
 
     if (error) {
-      alert(error.message)
+      toast.error(error.message)
       return
     }
 
@@ -111,35 +115,39 @@ export default function DoctorsPage() {
     fetchData()
   }
 
-  const del = async (id: string) => {
-    if (!confirm("Hapus dokter ini?")) return
-    if (getDemoSession()) {
-      setData((current) => current.filter((item) => item.id !== id))
-      return
-    }
-
-    const { error } = await supabase.from("doctors").delete().eq("id", id)
-    if (error) {
-      alert(error.message)
-      return
-    }
-    fetchData()
+  const del = (id: string) => {
+    setPendingConfirm({
+      message: "Hapus dokter ini? Tindakan tidak bisa dibatalkan.",
+      onOk: async () => {
+        setPendingConfirm(null)
+        if (getDemoSession()) {
+          setData((current) => current.filter((item) => item.id !== id))
+          return
+        }
+        const { error } = await supabase.from("doctors").delete().eq("id", id)
+        if (error) console.error(error.message)
+        else fetchData()
+      },
+    })
   }
 
   if (profileLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-slate-400">Loading data dokter...</div>
+      <div className="space-y-3">
+        {[...Array(5)].map((_, i) => <SkeletonCard key={i} />)}
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
+      {pendingConfirm && (
+        <ConfirmDialog message={pendingConfirm.message} confirmLabel="Ya, Hapus" danger onConfirm={pendingConfirm.onOk} onCancel={() => setPendingConfirm(null)} />
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-1">🩺 Manajemen Dokter</h1>
+          <h1 className="text-3xl font-bold text-white mb-1">Manajemen Dokter</h1>
           <p className="text-slate-400">Total dokter: <span className="font-semibold text-indigo-400">{data.length}</span></p>
         </div>
         <button

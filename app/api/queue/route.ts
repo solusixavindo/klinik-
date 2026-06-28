@@ -119,17 +119,18 @@ export async function PATCH(req: Request) {
 
     // Kirim WA saat antrian dipanggil (fire and forget)
     if (status === "called" && data) {
-      const patientPhone = (data.patients as { phone?: string } | null)?.phone
-      if (patientPhone) {
+      const patientData = data.patients as { phone?: string; name?: string } | null
+      const patientPhone = patientData?.phone
+      if (patientPhone && patientData?.name) {
         const poliName = (data.doctors as { specialization?: string } | null)?.specialization ?? "Poli"
-        void sendWhatsApp(
+        sendWhatsApp(
           patientPhone,
           WA_TEMPLATES.queueCalled({
-            patientName: (data.patients as { name: string }).name,
+            patientName: patientData.name,
             queueNumber: data.queue_number as number,
             poli: poliName,
           })
-        )
+        ).catch((err) => console.error("WA queueCalled failed:", err))
       }
     }
 

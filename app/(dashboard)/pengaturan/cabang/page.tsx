@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { getDemoSession } from "@/lib/demoSession"
+import { ConfirmDialog } from "@/app/(dashboard)/_components/ConfirmDialog"
 
 type Branch = {
   id: string
@@ -53,6 +54,7 @@ export default function ManajemenCabangPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
+  const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onOk: () => void } | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [editId, setEditId] = useState<string | null>(null)
@@ -169,21 +171,25 @@ export default function ManajemenCabangPage() {
     setError("")
   }
 
-  const handleDeactivate = async (id: string) => {
-    if (!confirm("Nonaktifkan cabang ini?")) return
-    if (isDemo) {
-      setBranches((items) => items.map((item) => item.id === id ? { ...item, is_active: false } : item))
-      return
-    }
-
-    const token = await getToken()
-    const res = await fetch(`/api/branches?id=${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
+  const handleDeactivate = (id: string) => {
+    setPendingConfirm({
+      message: "Nonaktifkan cabang ini?",
+      onOk: async () => {
+        setPendingConfirm(null)
+        if (isDemo) {
+          setBranches((items) => items.map((item) => item.id === id ? { ...item, is_active: false } : item))
+          return
+        }
+        const token = await getToken()
+        const res = await fetch(`/api/branches?id=${id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const data = await res.json()
+        if (data.success) load()
+        else setError(data.error)
+      },
     })
-    const data = await res.json()
-    if (data.success) load()
-    else setError(data.error)
   }
 
   const handleActivate = async (id: string) => {
@@ -207,6 +213,9 @@ export default function ManajemenCabangPage() {
 
   return (
     <div className="space-y-6">
+      {pendingConfirm && (
+        <ConfirmDialog message={pendingConfirm.message} confirmLabel="Ya, Nonaktifkan" danger onConfirm={pendingConfirm.onOk} onCancel={() => setPendingConfirm(null)} />
+      )}
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>

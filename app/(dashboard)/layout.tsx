@@ -1,5 +1,6 @@
 "use client"
 
+import { Toaster } from "sonner"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
@@ -215,6 +216,7 @@ export default function Layout({
 
   return (
     <div className="theme-shell min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-slate-100">
+      <Toaster richColors closeButton position="bottom-right" theme="dark" />
       {/* Header Mobile */}
       <div className="theme-mobile-header lg:hidden sticky top-0 z-40 border-b border-slate-700/20 bg-slate-900/60 backdrop-blur-xl px-4 py-4">
         <div className="flex items-center justify-between">

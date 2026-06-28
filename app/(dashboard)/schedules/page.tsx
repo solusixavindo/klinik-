@@ -6,6 +6,8 @@ import { supabase } from "@/lib/supabase"
 import { useProfile } from "@/hooks/useProfile"
 import { getDemoSession } from "@/lib/demoSession"
 import { demoDoctors, demoSchedules } from "@/lib/demoData"
+import { ConfirmDialog } from "@/app/(dashboard)/_components/ConfirmDialog"
+import { toast } from "sonner"
 
 type Doctor = {
   id: string
@@ -49,6 +51,7 @@ export default function SchedulePage() {
   const [doctors, setDoctors] = useState<{ id: string; name: string }[]>([])
   const [form, setForm] = useState<ScheduleForm>({ doctor_id: "", day: "", start_time: "", end_time: "" })
   const [saving, setSaving] = useState(false)
+  const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onOk: () => void } | null>(null)
 
   /** Lewati RLS browser — sama seperti booking (service role di server). */
   const fetchSchedules = useCallback(async () => {
@@ -62,7 +65,7 @@ export default function SchedulePage() {
     const { data: sessionData } = await supabase.auth.getSession()
     const token = sessionData.session?.access_token
     if (!token) {
-      alert("Sesi login tidak valid. Silakan login ulang.")
+      toast.error("Sesi login tidak valid. Silakan login ulang.")
       return
     }
 
@@ -85,7 +88,7 @@ export default function SchedulePage() {
         .order("day", { ascending: true })
 
       if (error) {
-        alert(error.message)
+        toast.error(error.message)
         setData([])
         return
       }
@@ -95,7 +98,7 @@ export default function SchedulePage() {
 
     let msg = (typeof result.error === "string" && result.error) || "Gagal mengambil jadwal"
     if (typeof result.hint === "string") msg += `\n\n${result.hint}`
-    alert(msg)
+    toast.error(msg)
     setData([])
   }, [profile])
 
@@ -114,7 +117,7 @@ export default function SchedulePage() {
       const { data: doctorsData, error } = await query
       if (error) {
         console.error("Schedule doctors fetch failed", error)
-        alert(error.message)
+        toast.error(error.message)
       }
       setDoctors(doctorsData || [])
     }
@@ -125,7 +128,7 @@ export default function SchedulePage() {
 
   const submit = async () => {
     if (!form.doctor_id || !form.day || !form.start_time || !form.end_time) {
-      alert("Lengkapi data jadwal")
+      toast.error("Lengkapi data jadwal")
       return
     }
 
@@ -151,7 +154,7 @@ export default function SchedulePage() {
       const { data: sessionData } = await supabase.auth.getSession()
       const token = sessionData.session?.access_token
       if (!token) {
-        alert("Sesi login tidak valid. Silakan login ulang.")
+        toast.error("Sesi login tidak valid. Silakan login ulang.")
         return
       }
 
@@ -178,7 +181,7 @@ export default function SchedulePage() {
           { ...form, clinic_id: profile.clinic_id },
         ])
         if (error) {
-          alert(
+          toast.error(
             `${error.message}\n\nJika ini tetap RLS: pastikan profile.clinic_id sama dengan policy, atau perbaiki SUPABASE_SERVICE_ROLE_KEY di Hostinger (secret service_role).`
           )
           return
@@ -190,62 +193,65 @@ export default function SchedulePage() {
 
       let msg = (typeof result.error === "string" && result.error) || "Gagal menyimpan jadwal"
       if (typeof result.hint === "string") msg += `\n\n${result.hint}`
-      alert(msg)
+      toast.error(msg)
     } finally {
       setSaving(false)
     }
   }
 
-  const del = async (id: string) => {
-    if (!confirm("Hapus jadwal ini?")) return
+  const del = (id: string) => {
+    setPendingConfirm({
+      message: "Hapus jadwal ini?",
+      onOk: async () => {
+        setPendingConfirm(null)
+        try {
+          if (getDemoSession()) {
+            setData((current) => current.filter((item) => item.id !== id))
+            return
+          }
 
-    try {
-      if (getDemoSession()) {
-        setData((current) => current.filter((item) => item.id !== id))
-        return
-      }
+          const { data: sessionData } = await supabase.auth.getSession()
+          const token = sessionData.session?.access_token
+          if (!token) {
+            console.error("Sesi login tidak valid")
+            return
+          }
 
-      const { data: sessionData } = await supabase.auth.getSession()
-      const token = sessionData.session?.access_token
-      if (!token) {
-        alert("Sesi login tidak valid. Silakan login ulang.")
-        return
-      }
+          const response = await fetch(`/api/schedules?id=${encodeURIComponent(id)}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+            cache: "no-store",
+          })
 
-      const response = await fetch(`/api/schedules?id=${encodeURIComponent(id)}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-        cache: "no-store",
-      })
+          const result = await parseSchedulesApiJson(response)
 
-      const result = await parseSchedulesApiJson(response)
+          if (response.ok && result.success === true) {
+            fetchSchedules()
+            return
+          }
 
-      if (response.ok && result.success === true) {
-        fetchSchedules()
-        return
-      }
+          if (shouldFallbackSchedulesApi(result, response.status) && profile?.clinic_id) {
+            const { error } = await supabase
+              .from("schedules")
+              .delete()
+              .eq("id", id)
+              .eq("clinic_id", profile.clinic_id)
+            if (error) {
+              console.error(error.message)
+              return
+            }
+            fetchSchedules()
+            return
+          }
 
-      if (shouldFallbackSchedulesApi(result, response.status) && profile?.clinic_id) {
-        const { error } = await supabase
-          .from("schedules")
-          .delete()
-          .eq("id", id)
-          .eq("clinic_id", profile.clinic_id)
-        if (error) {
-          alert(error.message)
-          return
+          let msg = (typeof result.error === "string" && result.error) || "Gagal menghapus jadwal"
+          if (typeof result.hint === "string") msg += ` — ${result.hint}`
+          console.error(msg)
+        } catch (err: unknown) {
+          console.error(err instanceof Error ? err.message : "Gagal menghapus jadwal")
         }
-        fetchSchedules()
-        return
       }
-
-      let msg = (typeof result.error === "string" && result.error) || "Gagal menghapus jadwal"
-      if (typeof result.hint === "string") msg += `\n\n${result.hint}`
-      alert(msg)
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Gagal menghapus jadwal"
-      alert(message)
-    }
+    })
   }
 
   if (profileLoading) {
@@ -258,10 +264,13 @@ export default function SchedulePage() {
 
   return (
     <div className="space-y-6">
+      {pendingConfirm && (
+        <ConfirmDialog message={pendingConfirm.message} confirmLabel="Ya, Hapus" danger onConfirm={pendingConfirm.onOk} onCancel={() => setPendingConfirm(null)} />
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-1">📅 Jadwal Dokter</h1>
+          <h1 className="text-3xl font-bold text-white mb-1">Jadwal Dokter</h1>
           <p className="text-slate-400">Total jadwal: <span className="font-semibold text-indigo-400">{data.length}</span></p>
         </div>
       </div>

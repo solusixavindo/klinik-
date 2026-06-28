@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
+import { ConfirmDialog } from "@/app/(dashboard)/_components/ConfirmDialog"
 
 type StockItem = {
   id: string
@@ -32,6 +33,7 @@ export default function StokObatPage() {
   const [adjustId, setAdjustId] = useState<string | null>(null)
   const [adjustVal, setAdjustVal] = useState("")
   const [lowStockCount, setLowStockCount] = useState(0)
+  const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onOk: () => void } | null>(null)
 
   const getToken = async () => (await supabase.auth.getSession()).data.session?.access_token
 
@@ -89,11 +91,16 @@ export default function StokObatPage() {
     setError("")
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Hapus item ini dari stok?")) return
-    const token = await getToken()
-    await fetch(`/api/stock?id=${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } })
-    load()
+  const handleDelete = (id: string) => {
+    setPendingConfirm({
+      message: "Hapus item ini dari stok?",
+      onOk: async () => {
+        setPendingConfirm(null)
+        const token = await getToken()
+        await fetch(`/api/stock?id=${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } })
+        load()
+      },
+    })
   }
 
   const handleAdjust = async (id: string) => {
@@ -116,6 +123,9 @@ export default function StokObatPage() {
 
   return (
     <div className="space-y-6">
+      {pendingConfirm && (
+        <ConfirmDialog message={pendingConfirm.message} confirmLabel="Ya, Hapus" danger onConfirm={pendingConfirm.onOk} onCancel={() => setPendingConfirm(null)} />
+      )}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-indigo-400">Operasional</p>

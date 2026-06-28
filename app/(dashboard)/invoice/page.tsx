@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { useProfile } from "@/hooks/useProfile"
+import { toast } from "sonner"
 
 type Patient = {
   name?: string
@@ -43,7 +44,7 @@ export default function InvoiceListPage() {
 
     if (error) {
       console.error("Fetch invoice data failed", error)
-      alert(error.message || "Gagal mengambil data invoice")
+      toast.error(error.message || "Gagal mengambil data invoice")
       setLoading(false)
       return
     }
@@ -68,7 +69,7 @@ export default function InvoiceListPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-white mb-1">💰 Invoice & Pembayaran</h1>
+        <h1 className="text-3xl font-bold text-white mb-1">Invoice & Pembayaran</h1>
         <p className="text-slate-400">
           Total invoice: <span className="font-semibold text-indigo-400">{data.length}</span>
         </p>

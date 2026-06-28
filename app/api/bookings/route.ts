@@ -185,18 +185,20 @@ export async function POST(req: Request) {
     }
 
     // Kirim WA konfirmasi (fire and forget)
-    const patientPhone = (booking.patients as { phone?: string } | null)?.phone
-    if (patientPhone) {
+    const patientData = booking.patients as { phone?: string; name?: string } | null
+    const doctorData = booking.doctors as { name?: string } | null
+    const patientPhone = patientData?.phone
+    if (patientPhone && patientData?.name && doctorData?.name) {
       const { data: clinicData } = await supabaseAdmin.from("clinics").select("name").eq("id", clinicId).single()
-      void sendWhatsApp(
+      sendWhatsApp(
         patientPhone,
         WA_TEMPLATES.bookingConfirm({
-          patientName: (booking.patients as { name: string }).name,
-          doctorName: (booking.doctors as { name: string }).name,
+          patientName: patientData.name,
+          doctorName: doctorData.name,
           date: booking.visit_date as string,
           clinicName: clinicData?.name ?? "Klinik",
         })
-      )
+      ).catch((err) => console.error("WA bookingConfirm failed:", err))
     }
 
     return NextResponse.json({ success: true, booking, remaining: remaining - 1 })

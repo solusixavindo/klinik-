@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
+import { toast } from "sonner"
 
 type Props = {
   type: string
@@ -57,7 +58,7 @@ export default function ExportButton({ type, date, month, filename }: Props) {
       URL.revokeObjectURL(url)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Gagal export"
-      alert(msg)
+      toast.error(msg)
     } finally {
       setLoading(null)
     }

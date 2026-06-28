@@ -6,6 +6,7 @@ import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { useProfile } from "@/hooks/useProfile"
 import { getDemoSession } from "@/lib/demoSession"
+import { toast } from "sonner"
 import { demoDoctors, demoPatients, getDemoBookings } from "@/lib/demoData"
 
 type Patient = {
@@ -75,7 +76,7 @@ export default function BookingPage() {
 
     if (patientsRes.error || doctorsRes.error || bookingsRes.error) {
       console.error("Fetch bookings data failed", patientsRes.error || doctorsRes.error || bookingsRes.error)
-      alert((patientsRes.error || doctorsRes.error || bookingsRes.error)?.message || "Gagal mengambil data booking")
+      toast.error((patientsRes.error || doctorsRes.error || bookingsRes.error)?.message || "Gagal mengambil data booking")
       setLoadingData(false)
       return
     }
@@ -93,18 +94,18 @@ export default function BookingPage() {
 
   const submit = async () => {
     if (!form.patient_id || !form.doctor_id || !form.visit_date || !form.price) {
-      alert("Semua field booking wajib diisi")
+      toast.error("Semua field booking wajib diisi")
       return
     }
 
     if (!clinicId) {
-      alert("Data klinik belum tersedia. Silakan login ulang.")
+      toast.error("Data klinik belum tersedia. Silakan login ulang.")
       return
     }
 
     const price = Number(form.price)
     if (!price || price <= 0) {
-      alert("Harga harus angka positif")
+      toast.error("Harga harus angka positif")
       return
     }
 
@@ -132,7 +133,7 @@ export default function BookingPage() {
 
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.access_token) {
-        alert("Sesi login tidak valid. Silakan login ulang.")
+        toast.error("Sesi login tidak valid. Silakan login ulang.")
         return
       }
 
@@ -153,7 +154,7 @@ export default function BookingPage() {
       const result = await response.json()
 
       if (!response.ok || !result.success) {
-        alert(result.error || "Gagal membuat booking")
+        toast.error(result.error || "Gagal membuat booking")
         return
       }
 
@@ -161,7 +162,7 @@ export default function BookingPage() {
       setData((current) => [result.booking, ...current])
     } catch (err) {
       const message = err instanceof Error ? err.message : "Gagal membuat booking"
-      alert(message)
+      toast.error(message)
     } finally {
       setSaving(false)
     }
@@ -170,7 +171,7 @@ export default function BookingPage() {
   const sendWA = (booking: Booking) => {
     const phone = booking.patients?.phone
     if (!phone) {
-      alert("Nomor HP pasien tidak tersedia")
+      toast.error("Nomor HP pasien tidak tersedia")
       return
     }
 
@@ -195,7 +196,7 @@ Total: Rp ${booking.price}`
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-1">📖 Manajemen Booking</h1>
+          <h1 className="text-3xl font-bold text-white mb-1">Manajemen Booking</h1>
           <p className="text-slate-400">
             Total booking:{" "}
             <span className="font-semibold text-indigo-400">{data.length}</span>

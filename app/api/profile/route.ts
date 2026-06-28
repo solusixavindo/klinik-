@@ -29,7 +29,7 @@ export async function GET(req: Request) {
 
     const { data: profile, error } = await supabaseAdmin
       .from("profiles")
-      .select("*, clinics(name, logo_url)")
+      .select("*, clinics(name)")
       .eq("id", userData.user.id)
       .maybeSingle()
 

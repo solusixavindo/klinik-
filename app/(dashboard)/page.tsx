@@ -17,6 +17,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts"
+import { toast } from "sonner"
 import { supabase } from "@/lib/supabase"
 import { useProfile } from "@/hooks/useProfile"
 import { allDashboardMenuItems } from "@/lib/dashboardMenu"
@@ -251,7 +252,7 @@ export default function DashboardPage() {
 
   const inviteStaff = async () => {
     if (!profile?.clinic_id) {
-      alert("Profil klinik tidak tersedia")
+      toast.error("Profil klinik tidak tersedia")
       return
     }
 
@@ -264,7 +265,7 @@ export default function DashboardPage() {
       const { data: sessionData } = await supabase.auth.getSession()
       const token = sessionData.session?.access_token
       if (!token) {
-        alert("Sesi login tidak valid. Silakan login ulang.")
+        toast.error("Sesi login tidak valid. Silakan login ulang.")
         setBusy(false)
         return
       }
@@ -280,13 +281,13 @@ export default function DashboardPage() {
       const data = await res.json()
 
       if (data.success) {
-        alert(`Staff berhasil ditambahkan!\nPassword sementara: ${data.password}\nSilakan minta staff mengganti password segera.`)
+        toast.success(`Staff berhasil ditambahkan!\nPassword sementara: ${data.password}\nSilakan minta staff mengganti password segera.`)
       } else {
-        alert(data.error || "Gagal menambahkan staff")
+        toast.error(data.error || "Gagal menambahkan staff")
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Terjadi kesalahan server"
-      alert(message)
+      toast.error(message)
     } finally {
       setBusy(false)
     }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
+import { ConfirmDialog } from "@/app/(dashboard)/_components/ConfirmDialog"
 
 type Patient = { id: string; name: string; phone?: string }
 type Doctor = { id: string; name: string; specialization?: string }
@@ -36,6 +37,7 @@ export default function RekamMedisPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
+  const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onOk: () => void } | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [filterPatient, setFilterPatient] = useState("")
@@ -101,21 +103,29 @@ export default function RekamMedisPage() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Hapus rekam medis ini?")) return
-    const token = await getToken()
-    await fetch(`/api/medical-records?id=${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
+  const handleDelete = (id: string) => {
+    setPendingConfirm({
+      message: "Hapus rekam medis ini? Tindakan tidak bisa dibatalkan.",
+      onOk: async () => {
+        setPendingConfirm(null)
+        const token = await getToken()
+        await fetch(`/api/medical-records?id=${id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        setDetail(null)
+        loadData(filterPatient || undefined)
+      },
     })
-    setDetail(null)
-    loadData(filterPatient || undefined)
   }
 
   const f = (v: string, key: string) => setForm((prev) => ({ ...prev, [key]: v }))
 
   return (
     <div className="space-y-6">
+      {pendingConfirm && (
+        <ConfirmDialog message={pendingConfirm.message} confirmLabel="Ya, Hapus" danger onConfirm={pendingConfirm.onOk} onCancel={() => setPendingConfirm(null)} />
+      )}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-indigo-400">Pelayanan</p>

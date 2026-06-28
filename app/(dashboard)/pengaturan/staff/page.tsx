@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { ConfirmDialog } from "@/app/(dashboard)/_components/ConfirmDialog"
 import { supabase } from "@/lib/supabase"
 import {
   type UserRole,
@@ -32,6 +33,7 @@ export default function ManajemenStaffPage() {
   const [form, setForm] = useState(emptyForm)
   const [currentRole, setCurrentRole] = useState<UserRole | null>(null)
   const [roleLoading, setRoleLoading] = useState(true)
+  const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onOk: () => void } | null>(null)
 
   const getToken = async () => (await supabase.auth.getSession()).data.session?.access_token
 
@@ -125,23 +127,28 @@ export default function ManajemenStaffPage() {
     }
   }
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Hapus staff "${name}"? Tindakan ini tidak bisa dibatalkan.`)) return
-    setError("")
-    setSuccess("")
-    try {
-      const token = await getToken()
-      const res = await fetch(`/api/staff?id=${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      const data = await res.json()
-      if (!res.ok || !data.success) throw new Error(data.error)
-      setSuccess("Staff berhasil dihapus")
-      load()
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Gagal menghapus staff")
-    }
+  const handleDelete = (id: string, name: string) => {
+    setPendingConfirm({
+      message: `Hapus staff "${name}"? Tindakan ini tidak bisa dibatalkan.`,
+      onOk: async () => {
+        setPendingConfirm(null)
+        setError("")
+        setSuccess("")
+        try {
+          const token = await getToken()
+          const res = await fetch(`/api/staff?id=${id}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          const data = await res.json()
+          if (!res.ok || !data.success) throw new Error(data.error)
+          setSuccess("Staff berhasil dihapus")
+          load()
+        } catch (err: unknown) {
+          setError(err instanceof Error ? err.message : "Gagal menghapus staff")
+        }
+      },
+    })
   }
 
   if (roleLoading) {
@@ -168,6 +175,9 @@ export default function ManajemenStaffPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
+      {pendingConfirm && (
+        <ConfirmDialog message={pendingConfirm.message} confirmLabel="Ya, Hapus" danger onConfirm={pendingConfirm.onOk} onCancel={() => setPendingConfirm(null)} />
+      )}
       <div className="max-w-5xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">

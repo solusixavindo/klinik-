@@ -6,6 +6,9 @@ import { supabase } from "@/lib/supabase"
 import { useProfile } from "@/hooks/useProfile"
 import { getDemoSession } from "@/lib/demoSession"
 import { demoPatients } from "@/lib/demoData"
+import { ConfirmDialog } from "@/app/(dashboard)/_components/ConfirmDialog"
+import { SkeletonCard } from "@/app/(dashboard)/_components/Skeleton"
+import { toast } from "sonner"
 
 type Patient = {
   id: string
@@ -35,6 +38,7 @@ export default function PatientsPage() {
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState(initialForm)
   const [showForm, setShowForm] = useState(false)
+  const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onOk: () => void } | null>(null)
 
   const fetchData = useCallback(async () => {
     if (!profile?.clinic_id) return
@@ -52,7 +56,7 @@ export default function PatientsPage() {
       .order("created_at", { ascending: false })
 
     if (error) {
-      alert(error.message)
+      toast.error(error.message)
     }
 
     setData(patientsData || [])
@@ -66,7 +70,7 @@ export default function PatientsPage() {
 
   const submit = async () => {
     if (!form.name || !form.phone) {
-      alert("Nama & No. HP wajib diisi")
+      toast.error("Nama & No. HP wajib diisi")
       return
     }
 
@@ -98,7 +102,7 @@ export default function PatientsPage() {
 
     const { error } = await action
     if (error) {
-      alert(error.message)
+      toast.error(error.message)
       return
     }
 
@@ -108,19 +112,20 @@ export default function PatientsPage() {
     fetchData()
   }
 
-  const del = async (id: string) => {
-    if (!confirm("Hapus pasien ini?")) return
-    if (getDemoSession()) {
-      setData((current) => current.filter((item) => item.id !== id))
-      return
-    }
-
-    const { error } = await supabase.from("patients").delete().eq("id", id)
-    if (error) {
-      alert(error.message)
-      return
-    }
-    fetchData()
+  const del = (id: string) => {
+    setPendingConfirm({
+      message: "Hapus pasien ini? Tindakan tidak bisa dibatalkan.",
+      onOk: async () => {
+        setPendingConfirm(null)
+        if (getDemoSession()) {
+          setData((current) => current.filter((item) => item.id !== id))
+          return
+        }
+        const { error } = await supabase.from("patients").delete().eq("id", id)
+        if (error) console.error(error.message)
+        else fetchData()
+      },
+    })
   }
 
   const filtered = useMemo(
@@ -133,17 +138,20 @@ export default function PatientsPage() {
   )
 
   if (profileLoading) return (
-    <div className="flex items-center justify-center py-20">
-      <div className="text-slate-400">Loading data pasien...</div>
+    <div className="space-y-3">
+      {[...Array(5)].map((_, i) => <SkeletonCard key={i} />)}
     </div>
   )
 
   return (
     <div className="space-y-6">
+      {pendingConfirm && (
+        <ConfirmDialog message={pendingConfirm.message} confirmLabel="Ya, Hapus" danger onConfirm={pendingConfirm.onOk} onCancel={() => setPendingConfirm(null)} />
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-1">👥 Manajemen Pasien</h1>
+          <h1 className="text-3xl font-bold text-white mb-1">Manajemen Pasien</h1>
           <p className="text-slate-400">Total pasien: <span className="font-semibold text-indigo-400">{data.length}</span></p>
         </div>
         <button
@@ -248,8 +256,8 @@ export default function PatientsPage() {
       {/* List */}
       <div className="space-y-3">
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="text-slate-400">Loading data...</div>
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => <SkeletonCard key={i} />)}
           </div>
         ) : filtered.length === 0 ? (
           <div className="rounded-3xl border border-slate-700/20 bg-gradient-to-br from-slate-800/30 to-slate-900/20 backdrop-blur-xl p-12 text-center">

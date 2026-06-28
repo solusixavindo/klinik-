@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
+import { ConfirmDialog } from "@/app/(dashboard)/_components/ConfirmDialog"
 
 type BookingRow = {
   id: string
@@ -38,6 +39,7 @@ export default function ReminderWaPage() {
   const [tab, setTab] = useState<"bookings" | "logs">("bookings")
   const [error, setError] = useState("")
   const [successMsg, setSuccessMsg] = useState("")
+  const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onOk: () => void } | null>(null)
 
   // Stats derived from today's logs
   const today = new Date().toISOString().split("T")[0]
@@ -108,56 +110,66 @@ export default function ReminderWaPage() {
     loadLogs()
   }, [checkFonnte, loadBookings, loadLogs])
 
-  const handleSendAll = async () => {
-    if (!confirm(`Kirim reminder ke ${bookings.length} pasien besok?`)) return
-    setSending(true)
-    setError("")
-    setSuccessMsg("")
-    try {
-      const token = await getToken()
-      const res = await fetch("/api/send-reminder", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      const data = await res.json()
-      if (!data.success && data.total === undefined) throw new Error(data.error)
-      const ok = (data.results as { status: string }[] | undefined)?.filter((r) => r.status === "sent").length ?? 0
-      const fail = (data.results as { status: string }[] | undefined)?.filter((r) => r.status === "failed").length ?? 0
-      setSuccessMsg(`Selesai! Terkirim: ${ok}, Gagal: ${fail}`)
-      loadLogs()
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Gagal kirim reminder")
-    } finally {
-      setSending(false)
-    }
+  const handleSendAll = () => {
+    setPendingConfirm({
+      message: `Kirim reminder WhatsApp ke ${bookings.length} pasien besok?`,
+      onOk: async () => {
+        setPendingConfirm(null)
+        setSending(true)
+        setError("")
+        setSuccessMsg("")
+        try {
+          const token = await getToken()
+          const res = await fetch("/api/send-reminder", {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          const data = await res.json()
+          if (!data.success && data.total === undefined) throw new Error(data.error)
+          const ok = (data.results as { status: string }[] | undefined)?.filter((r) => r.status === "sent").length ?? 0
+          const fail = (data.results as { status: string }[] | undefined)?.filter((r) => r.status === "failed").length ?? 0
+          setSuccessMsg(`Selesai! Terkirim: ${ok}, Gagal: ${fail}`)
+          loadLogs()
+        } catch (err: unknown) {
+          setError(err instanceof Error ? err.message : "Gagal kirim reminder")
+        } finally {
+          setSending(false)
+        }
+      },
+    })
   }
 
-  const handleSendSelected = async () => {
+  const handleSendSelected = () => {
     if (selected.size === 0) { setError("Pilih minimal satu pasien"); return }
-    if (!confirm(`Kirim reminder ke ${selected.size} pasien terpilih?`)) return
-    setError("")
-    setSuccessMsg("")
-    let ok = 0; let fail = 0
-    const ids = [...selected]
-    for (const id of ids) {
-      setSendingIds((prev) => new Set(prev).add(id))
-      try {
-        const token = await getToken()
-        const res = await fetch("/api/send-reminder", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ booking_id: id }),
-        })
-        const data = await res.json()
-        if (data.status === "sent") ok++; else fail++
-      } catch {
-        fail++
-      } finally {
-        setSendingIds((prev) => { const s = new Set(prev); s.delete(id); return s })
-      }
-    }
-    setSelected(new Set())
-    setSuccessMsg(`Selesai! Terkirim: ${ok}, Gagal: ${fail}`)
-    loadLogs()
+    setPendingConfirm({
+      message: `Kirim reminder WhatsApp ke ${selected.size} pasien terpilih?`,
+      onOk: async () => {
+        setPendingConfirm(null)
+        setError("")
+        setSuccessMsg("")
+        let ok = 0; let fail = 0
+        const ids = [...selected]
+        for (const id of ids) {
+          setSendingIds((prev) => new Set(prev).add(id))
+          try {
+            const token = await getToken()
+            const res = await fetch("/api/send-reminder", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ booking_id: id }),
+            })
+            const data = await res.json()
+            if (data.status === "sent") ok++; else fail++
+          } catch {
+            fail++
+          } finally {
+            setSendingIds((prev) => { const s = new Set(prev); s.delete(id); return s })
+          }
+        }
+        setSelected(new Set())
+        setSuccessMsg(`Selesai! Terkirim: ${ok}, Gagal: ${fail}`)
+        loadLogs()
+      },
+    })
   }
 
   const toggleSelect = (id: string) => {
@@ -178,6 +190,9 @@ export default function ReminderWaPage() {
 
   return (
     <div className="space-y-6">
+      {pendingConfirm && (
+        <ConfirmDialog message={pendingConfirm.message} confirmLabel="Ya, Kirim" onConfirm={pendingConfirm.onOk} onCancel={() => setPendingConfirm(null)} />
+      )}
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>

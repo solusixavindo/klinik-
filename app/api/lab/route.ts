@@ -128,16 +128,17 @@ export async function PATCH(req: Request) {
 
     // Kirim WA saat hasil lab selesai (fire and forget)
     if (status === "selesai" && data) {
-      const patientPhone = (data.patients as { phone?: string } | null)?.phone
-      if (patientPhone) {
+      const patientData = data.patients as { phone?: string; name?: string } | null
+      const patientPhone = patientData?.phone
+      if (patientPhone && patientData?.name) {
         const testTypes = (data.test_types as string[] | null) ?? []
-        void sendWhatsApp(
+        sendWhatsApp(
           patientPhone,
           WA_TEMPLATES.labReady({
-            patientName: (data.patients as { name: string }).name,
+            patientName: patientData.name,
             testTypes,
           })
-        )
+        ).catch((err) => console.error("WA labReady failed:", err))
       }
     }
 

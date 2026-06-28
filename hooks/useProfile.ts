@@ -113,6 +113,9 @@ export function useProfile() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (getDemoSession()) return
       if (!session) router.replace("/login")
+    }).catch((err) => {
+      console.error("useProfile getSession failed:", err)
+      router.replace("/login")
     })
   }, [loading, profile, router])
 

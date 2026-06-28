@@ -9,7 +9,10 @@ import { demoDoctors, demoInvoices, demoPatients, demoSchedules, demoStockItems,
 type Menu = "Dashboard" | "Pasien" | "Dokter" | "Jadwal" | "Booking" | "Antrian" | "Rekam Medis" | "Invoice" | "Keuangan" | "Stok Obat" | "Laboratorium" | "Staff" | "Pengaturan Klinik"
 type RowData = { title: string; meta: string; tag?: string }
 
-const demoActionMessage = "Mode demo: data tidak disimpan. Mulai trial gratis untuk menggunakan fitur ini."
+// Module-level mutable ref so demoClick (used in sub-components) can trigger modal state in DemoPage
+let _openDemoModal: (() => void) | undefined
+const demoClick = () => _openDemoModal?.()
+
 const menus: { label: Menu; icon: string; level: PlanCode }[] = [
   { label: "Dashboard", icon: "▦", level: "basic" },
   { label: "Pasien", icon: "◇", level: "basic" },
@@ -30,8 +33,6 @@ const demoPlans: PlanCode[] = ["basic", "standard", "pro", "premium"]
 const revenueBars = [48, 54, 61, 58, 73, 86, 92, 96]
 const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu"]
 const fmt = (value: number) => `Rp ${value.toLocaleString("id-ID")}`
-const demoClick = () => alert(demoActionMessage)
-
 const topServices = [
   ["Konsultasi Umum", "126 kunjungan", 18900000],
   ["Pemeriksaan Gigi", "84 tindakan", 25200000],
@@ -62,12 +63,16 @@ export default function DemoPage() {
     const queryPlan = new URLSearchParams(window.location.search).get("plan") as PlanCode | null
     return queryPlan && demoPlans.includes(queryPlan) ? queryPlan : "premium"
   })
+  const [showModal, setShowModal] = useState(false)
+  _openDemoModal = () => setShowModal(true)
+
   const data = useMemo(() => getDemoDashboard(plan), [plan])
   const bookings = useMemo(() => getDemoBookings(), [])
   const selectedPlan = PLANS[plan]
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#172554_0,#020617_38%,#111827_100%)] text-slate-100">
+      {showModal && <DemoModal onClose={() => setShowModal(false)} />}
       <div className="grid min-h-screen lg:grid-cols-[310px_1fr]">
         <aside className="hidden border-r border-slate-700/30 bg-slate-950/75 p-6 shadow-2xl shadow-black/30 backdrop-blur-xl lg:flex lg:flex-col">
           <Brand />
@@ -329,4 +334,41 @@ function Table({ headers, rows }: { headers: string[]; rows: React.ReactNode[][]
 
 function BarChart() {
   return <div className="flex h-72 items-end gap-3 rounded-2xl border border-slate-700/20 bg-slate-950/30 p-4">{revenueBars.map((value, i) => <div key={months[i]} className="flex h-full flex-1 flex-col justify-end gap-2"><div className="flex flex-1 items-end rounded-xl bg-slate-900/70 p-1"><div className="w-full rounded-lg bg-gradient-to-t from-indigo-600 via-sky-500 to-emerald-300 shadow-lg shadow-indigo-600/20" style={{ height: `${value}%` }} /></div><span className="text-center text-xs text-slate-500">{months[i]}</span></div>)}</div>
+}
+
+function DemoModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-md rounded-[28px] border border-indigo-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 p-8 shadow-2xl shadow-indigo-900/40">
+        <button onClick={onClose} className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-800 hover:text-white">✕</button>
+        <div className="mb-6 flex items-center gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-sky-500 to-cyan-400 text-2xl shadow-lg shadow-indigo-600/30">✦</div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-indigo-400">Mode Demo</p>
+            <h2 className="text-xl font-bold text-white">Aktifkan Fitur Ini</h2>
+          </div>
+        </div>
+        <p className="text-sm leading-relaxed text-slate-300">
+          Anda sedang melihat <span className="font-semibold text-white">simulasi data</span>. Daftar sekarang untuk menggunakan XaviKlinika dengan data nyata klinik Anda — gratis 14 hari, tanpa kartu kredit.
+        </p>
+        <ul className="mt-5 space-y-2 text-sm text-slate-400">
+          <li className="flex items-center gap-2"><span className="text-emerald-400">✓</span> Semua fitur aktif sejak hari pertama</li>
+          <li className="flex items-center gap-2"><span className="text-emerald-400">✓</span> Data real klinik Anda, aman dan terenkripsi</li>
+          <li className="flex items-center gap-2"><span className="text-emerald-400">✓</span> Aktif dalam 5 menit, tanpa instalasi</li>
+        </ul>
+        <div className="mt-7 flex flex-col gap-3">
+          <Link href="/register" onClick={onClose}
+            className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-cyan-600 px-6 py-4 text-sm font-bold text-white shadow-lg shadow-indigo-600/30 transition-all hover:shadow-indigo-600/50">
+            ✦ Mulai Trial Gratis 14 Hari
+          </Link>
+          <Link href="/register" onClick={onClose}
+            className="flex items-center justify-center gap-2 rounded-2xl border border-slate-700/60 px-6 py-3 text-sm font-semibold text-slate-300 transition hover:bg-slate-800/50 hover:text-white">
+            Lihat Semua Paket →
+          </Link>
+        </div>
+        <p className="mt-5 text-center text-xs text-slate-500">Tidak perlu kartu kredit · Aktif dalam 5 menit</p>
+      </div>
+    </div>
+  )
 }

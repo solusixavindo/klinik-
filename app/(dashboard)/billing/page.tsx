@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { PLANS, PlanCode } from "@/lib/billing"
 import { getDemoSession } from "@/lib/demoSession"
+import { toast } from "sonner"
 import { getDemoSubscription } from "@/lib/demoData"
 
 type SubscriptionResponse = {
@@ -62,7 +63,7 @@ export default function BillingPage() {
       if (res.ok && result.success && result.subscription) {
         setSubscription(result.subscription)
       } else {
-        alert(result.error || "Gagal mengambil data paket")
+        toast.error(result.error || "Gagal mengambil data paket")
       }
 
       setLoading(false)
@@ -73,7 +74,7 @@ export default function BillingPage() {
 
   const checkout = async (plan: PlanCode) => {
     if (getDemoSession()) {
-      alert("Mode demo: perubahan paket hanya simulasi. Untuk aktivasi real, gunakan akun klinik asli.")
+      toast.error("Mode demo: perubahan paket hanya simulasi. Untuk aktivasi real, gunakan akun klinik asli.")
       setSubscription(getDemoSubscription(plan))
       return
     }
@@ -91,7 +92,7 @@ export default function BillingPage() {
       const token = sessionData.session?.access_token
 
       if (!token) {
-        alert("Sesi login tidak ditemukan. Silakan login ulang.")
+        toast.error("Sesi login tidak ditemukan. Silakan login ulang.")
         return
       }
 
@@ -106,14 +107,14 @@ export default function BillingPage() {
       const result = (await res.json()) as CheckoutResponse
 
       if (!res.ok || !result.success || !result.redirect_url) {
-        alert(result.error || "Gagal membuat pembayaran paket")
+        toast.error(result.error || "Gagal membuat pembayaran paket")
         return
       }
 
       window.location.assign(result.redirect_url)
     } catch (err) {
       const message = err instanceof Error ? err.message : "Gagal membuat pembayaran paket"
-      alert(message)
+      toast.error(message)
     } finally {
       setCheckoutPlan(null)
     }

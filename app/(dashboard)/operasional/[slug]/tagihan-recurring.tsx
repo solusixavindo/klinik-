@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
+import { ConfirmDialog } from "@/app/(dashboard)/_components/ConfirmDialog"
 
 const currency = new Intl.NumberFormat("id-ID")
 
@@ -87,6 +88,7 @@ export default function TagihanRecurringPage() {
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null)
+  const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onOk: () => void } | null>(null)
 
   const getToken = useCallback(async () => {
     const { data } = await supabase.auth.getSession()
@@ -199,20 +201,25 @@ export default function TagihanRecurringPage() {
     }
   }
 
-  const deletePlan = async (id: string) => {
+  const deletePlan = (id: string) => {
     if (!token) return
-    if (!confirm("Hapus plan ini?")) return
-    const res = await fetch(`/api/recurring?id=${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
+    setPendingConfirm({
+      message: "Hapus plan tagihan berulang ini?",
+      onOk: async () => {
+        setPendingConfirm(null)
+        const res = await fetch(`/api/recurring?id=${id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token!}` },
+        })
+        const data = await res.json() as { success?: boolean; error?: string }
+        if (data.success) {
+          setMsg({ type: "ok", text: "Plan berhasil dihapus." })
+          void fetchAll(token!)
+        } else {
+          setMsg({ type: "err", text: data.error || "Gagal hapus" })
+        }
+      },
     })
-    const data = await res.json() as { success?: boolean; error?: string }
-    if (data.success) {
-      setMsg({ type: "ok", text: "Plan berhasil dihapus." })
-      void fetchAll(token)
-    } else {
-      setMsg({ type: "err", text: data.error || "Gagal hapus" })
-    }
   }
 
   const openAddForm = () => {
@@ -286,6 +293,9 @@ export default function TagihanRecurringPage() {
 
   return (
     <div className="space-y-6">
+      {pendingConfirm && (
+        <ConfirmDialog message={pendingConfirm.message} confirmLabel="Ya, Hapus" danger onConfirm={pendingConfirm.onOk} onCancel={() => setPendingConfirm(null)} />
+      )}
       {/* Header */}
       <div className="border-b border-slate-700/20 pb-5">
         <h1 className="text-2xl font-bold text-white">Tagihan Berulang</h1>

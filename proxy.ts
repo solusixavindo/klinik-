@@ -45,20 +45,24 @@ export function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
-  const hasAuth = request.cookies.getAll().some((cookie) => cookie.name.includes("-auth-token") && cookie.value)
+  const hasAuthCookie = request.cookies.getAll().some((cookie) => cookie.name.endsWith("-auth-token") && cookie.value)
   const hasDemoSession = Boolean(request.cookies.get("xaviklinika-demo-session")?.value)
+  // Supabase JS v2 stores sessions in localStorage, so browser API calls use Authorization header
+  const hasAuthHeader = Boolean(request.headers.get("authorization")?.toLowerCase().startsWith("bearer "))
 
-  if (!hasAuth && !hasDemoSession && pathname.startsWith("/api/")) {
-    return NextResponse.json(
-      { success: false, error: "Sesi login tidak ditemukan" },
-      { status: 401 }
-    )
+  // API routes: block if no auth at all (cookie, demo session, or Authorization header)
+  if (pathname.startsWith("/api/")) {
+    if (!hasAuthCookie && !hasDemoSession && !hasAuthHeader) {
+      return NextResponse.json(
+        { success: false, error: "Sesi login tidak ditemukan" },
+        { status: 401 }
+      )
+    }
+    return NextResponse.next()
   }
 
-  if (!hasAuth && !hasDemoSession) {
-    return NextResponse.redirect(new URL("/login", request.url))
-  }
-
+  // Page routes: do NOT redirect here — client-side auth in (dashboard)/layout.tsx
+  // handles redirects. Middleware cannot check localStorage-based Supabase sessions.
   return NextResponse.next()
 }
 
