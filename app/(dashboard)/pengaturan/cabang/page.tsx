@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
-import { getDemoSession } from "@/lib/demoSession"
 import { ConfirmDialog } from "@/app/(dashboard)/_components/ConfirmDialog"
 
 type Branch = {
@@ -25,28 +24,6 @@ type ClinicInfo = {
 }
 
 const emptyForm = { name: "", address: "", phone: "", pic_name: "" }
-const demoBranches: Branch[] = [
-  {
-    id: "demo-branch-utara",
-    clinic_id: "demo-premium",
-    name: "Cabang Utara",
-    address: "Jl. Melati No. 12, Jakarta Utara",
-    phone: "021-555-0101",
-    pic_name: "Nadia Putri",
-    is_active: true,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "demo-branch-selatan",
-    clinic_id: "demo-premium",
-    name: "Cabang Selatan",
-    address: "Jl. Anggrek Raya No. 8, Jakarta Selatan",
-    phone: "021-555-0202",
-    pic_name: "Rizky Pratama",
-    is_active: true,
-    created_at: new Date().toISOString(),
-  },
-]
 
 export default function ManajemenCabangPage() {
   const [branches, setBranches] = useState<Branch[]>([])
@@ -59,7 +36,6 @@ export default function ManajemenCabangPage() {
   const [form, setForm] = useState(emptyForm)
   const [editId, setEditId] = useState<string | null>(null)
   const [isPremium, setIsPremium] = useState(false)
-  const [isDemo, setIsDemo] = useState(false)
 
   const getToken = async () => (await supabase.auth.getSession()).data.session?.access_token
 
@@ -67,21 +43,6 @@ export default function ManajemenCabangPage() {
     setLoading(true)
     setError("")
     try {
-      const demoSession = getDemoSession()
-      if (demoSession) {
-        const premiumDemo = demoSession.plan === "premium"
-        setIsDemo(true)
-        setIsPremium(premiumDemo)
-        setClinic({
-          name: demoSession.clinicName,
-          address: "Jl. Klinik Demo No. 1",
-          phone: "021-555-0000",
-          plan: demoSession.plan,
-        })
-        setBranches(premiumDemo ? demoBranches : [])
-        return
-      }
-
       const token = await getToken()
       const [branchRes, settingsRes] = await Promise.all([
         fetch("/api/branches", { headers: { Authorization: `Bearer ${token}` } }),
@@ -118,26 +79,6 @@ export default function ManajemenCabangPage() {
     setSaving(true)
     setError("")
     try {
-      if (isDemo) {
-        const nextBranch: Branch = {
-          id: editId ?? `demo-branch-${Date.now()}`,
-          clinic_id: "demo-premium",
-          name: form.name,
-          address: form.address || null,
-          phone: form.phone || null,
-          pic_name: form.pic_name || null,
-          is_active: true,
-          created_at: new Date().toISOString(),
-        }
-        setBranches((items) =>
-          editId ? items.map((item) => item.id === editId ? { ...item, ...nextBranch } : item) : [nextBranch, ...items]
-        )
-        setShowForm(false)
-        setForm(emptyForm)
-        setEditId(null)
-        return
-      }
-
       const token = await getToken()
       const method = editId ? "PATCH" : "POST"
       const body = editId ? { id: editId, ...form } : { ...form }
@@ -176,10 +117,6 @@ export default function ManajemenCabangPage() {
       message: "Nonaktifkan cabang ini?",
       onOk: async () => {
         setPendingConfirm(null)
-        if (isDemo) {
-          setBranches((items) => items.map((item) => item.id === id ? { ...item, is_active: false } : item))
-          return
-        }
         const token = await getToken()
         const res = await fetch(`/api/branches?id=${id}`, {
           method: "DELETE",
@@ -193,11 +130,6 @@ export default function ManajemenCabangPage() {
   }
 
   const handleActivate = async (id: string) => {
-    if (isDemo) {
-      setBranches((items) => items.map((item) => item.id === id ? { ...item, is_active: true } : item))
-      return
-    }
-
     const token = await getToken()
     const res = await fetch("/api/branches", {
       method: "PATCH",
@@ -261,12 +193,6 @@ export default function ManajemenCabangPage() {
 
       {error && (
         <div className="rounded-2xl border border-red-700/30 bg-red-950/30 p-4 text-sm text-red-300">{error}</div>
-      )}
-
-      {isDemo && isPremium && (
-        <div className="rounded-2xl border border-indigo-500/30 bg-indigo-950/20 p-4 text-sm text-indigo-200">
-          Mode demo aktif. Data cabang di halaman ini adalah simulasi dan tidak disimpan ke Supabase.
-        </div>
       )}
 
       {/* Form tambah/edit */}

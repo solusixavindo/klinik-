@@ -4,8 +4,6 @@
 import { useCallback, useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useProfile } from "@/hooks/useProfile"
-import { getDemoSession } from "@/lib/demoSession"
-import { demoDoctors, demoSchedules } from "@/lib/demoData"
 import { ConfirmDialog } from "@/app/(dashboard)/_components/ConfirmDialog"
 import { toast } from "sonner"
 
@@ -38,7 +36,6 @@ async function parseSchedulesApiJson(res: Response): Promise<Record<string, unkn
   }
 }
 
-/** API gagal karena service_role salah → pakai Supabase browser + policy RLS Anda. */
 function shouldFallbackSchedulesApi(result: Record<string, unknown>, status: number): boolean {
   if (status === 503 && result.code === "SERVICE_ROLE_INVALID") return true
   const err = typeof result.error === "string" ? result.error : ""
@@ -53,14 +50,8 @@ export default function SchedulePage() {
   const [saving, setSaving] = useState(false)
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onOk: () => void } | null>(null)
 
-  /** Lewati RLS browser — sama seperti booking (service role di server). */
   const fetchSchedules = useCallback(async () => {
     if (!profile) return
-
-    if (getDemoSession()) {
-      setData(demoSchedules)
-      return
-    }
 
     const { data: sessionData } = await supabase.auth.getSession()
     const token = sessionData.session?.access_token
@@ -106,15 +97,11 @@ export default function SchedulePage() {
     if (!profile) return
 
     const fetchDoctors = async () => {
-      if (getDemoSession()) {
-        setDoctors(demoDoctors.map((doctor) => ({ id: doctor.id, name: doctor.name })))
-        return
-      }
-
-      const query = profile.clinic_id
-        ? supabase.from("doctors").select("id, name").eq("clinic_id", profile.clinic_id)
-        : supabase.from("doctors").select("id, name")
-      const { data: doctorsData, error } = await query
+      if (!profile.clinic_id) return
+      const { data: doctorsData, error } = await supabase
+        .from("doctors")
+        .select("id, name")
+        .eq("clinic_id", profile.clinic_id)
       if (error) {
         console.error("Schedule doctors fetch failed", error)
         toast.error(error.message)
@@ -135,22 +122,6 @@ export default function SchedulePage() {
     setSaving(true)
 
     try {
-      if (getDemoSession()) {
-        const doctor = demoDoctors.find((item) => item.id === form.doctor_id)
-        setData((current) => [
-          {
-            id: `demo-schedule-${Date.now()}`,
-            day: form.day,
-            start_time: form.start_time,
-            end_time: form.end_time,
-            doctors: doctor ? { id: doctor.id, name: doctor.name } : undefined,
-          },
-          ...current,
-        ])
-        setForm({ doctor_id: "", day: "", start_time: "", end_time: "" })
-        return
-      }
-
       const { data: sessionData } = await supabase.auth.getSession()
       const token = sessionData.session?.access_token
       if (!token) {
@@ -181,9 +152,7 @@ export default function SchedulePage() {
           { ...form, clinic_id: profile.clinic_id },
         ])
         if (error) {
-          toast.error(
-            `${error.message}\n\nJika ini tetap RLS: pastikan profile.clinic_id sama dengan policy, atau perbaiki SUPABASE_SERVICE_ROLE_KEY di Hostinger (secret service_role).`
-          )
+          toast.error(error.message)
           return
         }
         setForm({ doctor_id: "", day: "", start_time: "", end_time: "" })
@@ -205,11 +174,6 @@ export default function SchedulePage() {
       onOk: async () => {
         setPendingConfirm(null)
         try {
-          if (getDemoSession()) {
-            setData((current) => current.filter((item) => item.id !== id))
-            return
-          }
-
           const { data: sessionData } = await supabase.auth.getSession()
           const token = sessionData.session?.access_token
           if (!token) {

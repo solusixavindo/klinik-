@@ -4,8 +4,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useProfile } from "@/hooks/useProfile"
-import { getDemoSession } from "@/lib/demoSession"
-import { demoPatients } from "@/lib/demoData"
 import { ConfirmDialog } from "@/app/(dashboard)/_components/ConfirmDialog"
 import { SkeletonCard } from "@/app/(dashboard)/_components/Skeleton"
 import { toast } from "sonner"
@@ -43,11 +41,6 @@ export default function PatientsPage() {
   const fetchData = useCallback(async () => {
     if (!profile?.clinic_id) return
 
-    if (getDemoSession()) {
-      setData(demoPatients)
-      return
-    }
-
     setLoading(true)
     const { data: patientsData, error } = await supabase
       .from("patients")
@@ -74,8 +67,7 @@ export default function PatientsPage() {
       return
     }
 
-    const payload = {
-      id: editId ?? `demo-patient-${Date.now()}`,
+    const basePayload = {
       name: form.name,
       phone: form.phone,
       gender: form.gender || undefined,
@@ -84,21 +76,9 @@ export default function PatientsPage() {
       clinic_id: profile?.clinic_id,
     }
 
-    if (getDemoSession()) {
-      setData((current) =>
-        editId
-          ? current.map((item) => item.id === editId ? { ...item, ...payload } : item)
-          : [{ ...payload, created_at: new Date().toISOString() }, ...current]
-      )
-      setEditId(null)
-      setForm(initialForm)
-      setShowForm(false)
-      return
-    }
-
     const action = editId
-      ? supabase.from("patients").update(payload).eq("id", editId)
-      : supabase.from("patients").insert([payload])
+      ? supabase.from("patients").update(basePayload).eq("id", editId)
+      : supabase.from("patients").insert([basePayload])
 
     const { error } = await action
     if (error) {
@@ -117,12 +97,8 @@ export default function PatientsPage() {
       message: "Hapus pasien ini? Tindakan tidak bisa dibatalkan.",
       onOk: async () => {
         setPendingConfirm(null)
-        if (getDemoSession()) {
-          setData((current) => current.filter((item) => item.id !== id))
-          return
-        }
         const { error } = await supabase.from("patients").delete().eq("id", id)
-        if (error) console.error(error.message)
+        if (error) toast.error(error.message)
         else fetchData()
       },
     })

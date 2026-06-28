@@ -4,8 +4,6 @@
 import { useCallback, useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useProfile } from "@/hooks/useProfile"
-import { getDemoSession } from "@/lib/demoSession"
-import { demoDoctors } from "@/lib/demoData"
 import { ConfirmDialog } from "@/app/(dashboard)/_components/ConfirmDialog"
 import { SkeletonCard } from "@/app/(dashboard)/_components/Skeleton"
 import { toast } from "sonner"
@@ -38,18 +36,14 @@ export default function DoctorsPage() {
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onOk: () => void } | null>(null)
 
   const fetchData = useCallback(async () => {
-    if (!profile) return
+    if (!profile?.clinic_id) return
 
-    if (getDemoSession()) {
-      setData(demoDoctors)
-      return
-    }
+    const { data: doctorsData, error } = await supabase
+      .from("doctors")
+      .select("*")
+      .eq("clinic_id", profile.clinic_id)
+      .order("name", { ascending: true })
 
-    const query = profile.clinic_id
-      ? supabase.from("doctors").select("*").eq("clinic_id", profile.clinic_id)
-      : supabase.from("doctors").select("*")
-
-    const { data: doctorsData, error } = await query
     if (error) {
       console.error("Doctors fetch failed", error)
       toast.error(error.message)
@@ -75,31 +69,18 @@ export default function DoctorsPage() {
     }
 
     setSaving(true)
-    const payload = {
-      id: editId ?? `demo-doctor-${Date.now()}`,
+    const basePayload = {
       name: form.name.trim(),
       specialization: form.specialization.trim(),
       phone: form.phone.trim() || undefined,
       email: form.email.trim() || undefined,
       experience: form.experience.trim() || undefined,
-    }
-
-    if (getDemoSession()) {
-      setData((current) =>
-        editId
-          ? current.map((item) => item.id === editId ? { ...item, ...payload } : item)
-          : [{ ...payload, clinic_id: profile.clinic_id }, ...current]
-      )
-      setSaving(false)
-      setEditId(null)
-      setForm(initialForm)
-      setShowForm(false)
-      return
+      clinic_id: profile.clinic_id,
     }
 
     const action = editId
-      ? supabase.from("doctors").update(payload).eq("id", editId)
-      : supabase.from("doctors").insert([{ ...payload, clinic_id: profile.clinic_id }])
+      ? supabase.from("doctors").update(basePayload).eq("id", editId)
+      : supabase.from("doctors").insert([basePayload])
 
     const { error } = await action
     setSaving(false)
@@ -120,10 +101,6 @@ export default function DoctorsPage() {
       message: "Hapus dokter ini? Tindakan tidak bisa dibatalkan.",
       onOk: async () => {
         setPendingConfirm(null)
-        if (getDemoSession()) {
-          setData((current) => current.filter((item) => item.id !== id))
-          return
-        }
         const { error } = await supabase.from("doctors").delete().eq("id", id)
         if (error) console.error(error.message)
         else fetchData()
