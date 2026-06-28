@@ -187,6 +187,8 @@ export default function Layout({
       }
     }
     fetchClinicInfo()
+    window.addEventListener("xaviklinika:clinic-updated", fetchClinicInfo)
+    return () => window.removeEventListener("xaviklinika:clinic-updated", fetchClinicInfo)
   }, [authenticated, pathname])
 
   const toggleTheme = () => {

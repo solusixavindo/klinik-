@@ -75,6 +75,7 @@ export default function PengaturanPage() {
       if (!res.ok || !data.success) throw new Error(data.error)
       setClinic(data.clinic)
       setSuccess("Pengaturan berhasil disimpan.")
+      window.dispatchEvent(new CustomEvent("xaviklinika:clinic-updated"))
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Gagal menyimpan pengaturan")
     } finally {
@@ -134,6 +135,7 @@ export default function PengaturanPage() {
       setLogoPreview(data.clinic.logo_url)
       setLogoFile(null)
       setSuccess("Logo klinik berhasil diperbarui.")
+      window.dispatchEvent(new CustomEvent("xaviklinika:clinic-updated"))
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Gagal upload logo klinik")
     } finally {

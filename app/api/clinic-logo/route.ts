@@ -68,13 +68,22 @@ export async function POST(req: Request) {
 
     const { data: clinic, error: updateError } = await supabaseAdmin
       .from("clinics")
-      .update({ logo_url: logoUrl, updated_at: new Date().toISOString() })
+      .update({ logo_url: logoUrl })
       .eq("id", auth.clinicId)
       .select("id, name, logo_url")
       .single()
 
-    if (updateError || !clinic) {
-      throw updateError || new Error("Logo berhasil diupload, tetapi gagal menyimpan URL logo.")
+    if (updateError) {
+      return NextResponse.json(
+        { success: false, error: updateError.message },
+        { status: 500 }
+      )
+    }
+    if (!clinic) {
+      return NextResponse.json(
+        { success: false, error: "Logo berhasil diupload, tetapi gagal menyimpan URL logo." },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json({ success: true, clinic })
