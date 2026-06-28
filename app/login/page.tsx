@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { supabase } from "@/lib/supabase"
+import { clearDemoSession } from "@/lib/demoSession"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 
@@ -42,6 +43,7 @@ export default function LoginPage() {
 
       if (signInError) throw signInError
 
+      clearDemoSession()
       router.push("/dashboard")
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Terjadi kesalahan saat login"

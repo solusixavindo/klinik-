@@ -22,6 +22,7 @@ import { supabase } from "@/lib/supabase"
 import { useProfile } from "@/hooks/useProfile"
 import { allDashboardMenuItems } from "@/lib/dashboardMenu"
 import { hasPlanFeature, PlanCode } from "@/lib/billing"
+import { clearDemoSession } from "@/lib/demoSession"
 
 type Booking = {
   id: string
@@ -294,6 +295,7 @@ export default function DashboardPage() {
   }
 
   const handleLogout = async () => {
+    clearDemoSession()
     await supabase.auth.signOut()
     window.location.href = "/login"
   }
