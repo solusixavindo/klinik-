@@ -3,6 +3,8 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import { getNextBillingDate, getPlan } from "@/lib/billing"
 import { isXenditPaidStatus } from "@/lib/xendit"
 
+export const runtime = "nodejs"
+
 type XenditInvoiceWebhook = {
   id?: string
   external_id?: string
