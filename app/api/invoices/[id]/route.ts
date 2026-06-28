@@ -47,7 +47,7 @@ export async function GET(
         .single(),
       supabaseAdmin
         .from("clinics")
-        .select("name, bank_account, bank_name, bank_holder")
+        .select("name, logo_url, bank_account, bank_name, bank_holder")
         .eq("id", profile.clinic_id)
         .single(),
     ])

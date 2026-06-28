@@ -1,4 +1,5 @@
 /* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable @next/next/no-img-element */
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
@@ -20,6 +21,7 @@ type InvoiceData = {
 
 type ClinicData = {
   name?: string
+  logo_url?: string | null
   bank_account?: string | null
   bank_name?: string | null
   bank_holder?: string | null
@@ -108,11 +110,21 @@ export default function InvoicePage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-700/20 pb-6 gap-4 mb-8">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-600/20">
-              <span className="text-2xl font-bold text-white">X</span>
-            </div>
+            {clinic?.logo_url ? (
+              <img
+                src={clinic.logo_url}
+                alt={clinic.name || "Logo Klinik"}
+                className="w-16 h-16 rounded-2xl object-cover border border-slate-700/40 print:border-gray-200"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-600/20">
+                <span className="text-2xl font-bold text-white">
+                  {(clinic?.name || "X").trim().slice(0, 1).toUpperCase()}
+                </span>
+              </div>
+            )}
             <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent print:text-gray-800">XaviKlinika</h1>
+              <h1 className="text-2xl font-bold text-white print:text-gray-800">{clinic?.name || "XaviKlinika"}</h1>
               <p className="text-slate-500 text-sm print:text-gray-600">Klinik Digital Modern & Premium</p>
             </div>
           </div>
