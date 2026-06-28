@@ -16,9 +16,11 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
     }
 
-    const token = process.env.FONNTE_TOKEN
+    const { data: clinicData } = await supabaseAdmin
+      .from("clinics").select("fonnte_token").eq("id", auth.clinicId).single()
+    const token = clinicData?.fonnte_token || process.env.FONNTE_TOKEN
     if (!token) {
-      return NextResponse.json({ success: false, error: "FONNTE_TOKEN belum diset" }, { status: 500 })
+      return NextResponse.json({ success: false, error: "Token Fonnte belum dikonfigurasi" }, { status: 500 })
     }
 
     const tomorrow = new Date()
@@ -104,9 +106,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
     }
 
-    const token = process.env.FONNTE_TOKEN
+    const { data: clinicData } = await supabaseAdmin
+      .from("clinics").select("fonnte_token").eq("id", auth.clinicId).single()
+    const token = clinicData?.fonnte_token || process.env.FONNTE_TOKEN
     if (!token) {
-      return NextResponse.json({ success: false, error: "FONNTE_TOKEN belum diset" }, { status: 500 })
+      return NextResponse.json({ success: false, error: "Token Fonnte belum dikonfigurasi" }, { status: 500 })
     }
 
     const body = await req.json()

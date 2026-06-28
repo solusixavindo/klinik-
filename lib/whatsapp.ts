@@ -1,8 +1,8 @@
 export type WaResult = { success: boolean; phone: string; error?: string }
 
-export async function sendWhatsApp(phone: string, message: string): Promise<WaResult> {
-  const token = process.env.FONNTE_TOKEN
-  if (!token) return { success: false, phone, error: "FONNTE_TOKEN not set" }
+export async function sendWhatsApp(phone: string, message: string, clinicToken?: string): Promise<WaResult> {
+  const token = clinicToken || process.env.FONNTE_TOKEN
+  if (!token) return { success: false, phone, error: "Token Fonnte belum dikonfigurasi" }
 
   const phone62 = phone.replace(/^0/, "62").replace(/\D/g, "")
 

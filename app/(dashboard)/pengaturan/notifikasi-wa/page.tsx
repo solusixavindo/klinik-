@@ -41,23 +41,77 @@ function getInitialActive(): Record<string, boolean> {
   return { bookingConfirm: true, queueCalled: true, labReady: true, reminderH1: true }
 }
 
+async function getToken(): Promise<string> {
+  const { data } = await supabase.auth.getSession()
+  return data.session?.access_token ?? ""
+}
+
 export default function NotifikasiWaPage() {
   const [connected, setConnected] = useState<boolean | null>(null)
   const [active, setActive] = useState<Record<string, boolean>>({})
+
+  const [fonnteToken, setFonnteToken] = useState("")
+  const [showToken, setShowToken] = useState(false)
+  const [savingToken, setSavingToken] = useState(false)
+  const [tokenMsg, setTokenMsg] = useState<{ ok: boolean; text: string } | null>(null)
+
   const [showTestModal, setShowTestModal] = useState(false)
   const [testPhone, setTestPhone] = useState("")
   const [testTemplate, setTestTemplate] = useState(TEMPLATES[0].key)
   const [testLoading, setTestLoading] = useState(false)
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
 
+  async function checkStatus() {
+    try {
+      const token = await getToken()
+      const r = await fetch("/api/wa/status", { headers: { Authorization: `Bearer ${token}` } })
+      const d = await r.json() as { connected?: boolean }
+      setConnected(d.connected ?? false)
+    } catch {
+      setConnected(false)
+    }
+  }
+
+  async function loadFonnteToken() {
+    try {
+      const token = await getToken()
+      const r = await fetch("/api/pengaturan", { headers: { Authorization: `Bearer ${token}` } })
+      const d = await r.json() as { success?: boolean; clinic?: { fonnte_token?: string | null } }
+      if (d.success && d.clinic?.fonnte_token) {
+        setFonnteToken(d.clinic.fonnte_token)
+      }
+    } catch {}
+  }
+
   useEffect(() => {
     setActive(getInitialActive())
-    // Cek status FONNTE_TOKEN via API
-    fetch("/api/wa/status")
-      .then((r) => r.json())
-      .then((d: { connected?: boolean }) => setConnected(d.connected ?? false))
-      .catch(() => setConnected(false))
+    void checkStatus()
+    void loadFonnteToken()
   }, [])
+
+  async function handleSaveToken() {
+    setSavingToken(true)
+    setTokenMsg(null)
+    try {
+      const token = await getToken()
+      const res = await fetch("/api/pengaturan", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ fonnte_token: fonnteToken }),
+      })
+      const d = await res.json() as { success: boolean; error?: string }
+      if (d.success) {
+        setTokenMsg({ ok: true, text: "Token berhasil disimpan." })
+        void checkStatus()
+      } else {
+        setTokenMsg({ ok: false, text: d.error ?? "Gagal menyimpan token" })
+      }
+    } catch {
+      setTokenMsg({ ok: false, text: "Terjadi kesalahan jaringan" })
+    } finally {
+      setSavingToken(false)
+    }
+  }
 
   function toggleActive(key: string) {
     setActive((prev) => {
@@ -72,8 +126,7 @@ export default function NotifikasiWaPage() {
     setTestLoading(true)
     setTestResult(null)
     try {
-      const { data } = await supabase.auth.getSession()
-      const token = data.session?.access_token ?? ""
+      const token = await getToken()
       const res = await fetch("/api/wa/test", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -103,7 +156,7 @@ export default function NotifikasiWaPage() {
         <div className="flex-1">
           <p className="text-sm font-medium text-gray-700">Status Koneksi Fonnte</p>
           <p className="text-xs text-gray-400 mt-0.5">
-            Token Fonnte dikonfigurasi via environment variable. Hubungi administrator untuk mengubah.
+            Token tersimpan per-klinik di database.
           </p>
         </div>
         {connected === null ? (
@@ -121,6 +174,45 @@ export default function NotifikasiWaPage() {
         )}
       </div>
 
+      {/* Konfigurasi Token */}
+      <div className="rounded-lg border bg-white p-5 space-y-3">
+        <h2 className="text-sm font-semibold text-gray-800">Token Fonnte</h2>
+        <p className="text-xs text-gray-500">
+          Dapatkan token dari <strong>fonnte.com</strong> → menu Device → klik nama device → salin Token.
+        </p>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <input
+              type={showToken ? "text" : "password"}
+              value={fonnteToken}
+              onChange={(e) => setFonnteToken(e.target.value)}
+              placeholder="Masukkan token Fonnte..."
+              className="w-full border rounded-lg px-3 py-2 text-sm pr-24 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              type="button"
+              onClick={() => setShowToken((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-700"
+            >
+              {showToken ? "Sembunyikan" : "Tampilkan"}
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={handleSaveToken}
+            disabled={savingToken}
+            className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+          >
+            {savingToken ? "Menyimpan..." : "Simpan Token"}
+          </button>
+        </div>
+        {tokenMsg && (
+          <p className={`text-xs ${tokenMsg.ok ? "text-green-600" : "text-red-600"}`}>
+            {tokenMsg.text}
+          </p>
+        )}
+      </div>
+
       {/* Template cards */}
       <div className="space-y-4">
         {TEMPLATES.map((tpl) => (
@@ -130,7 +222,6 @@ export default function NotifikasiWaPage() {
                 <h2 className="font-semibold text-gray-900">{tpl.title}</h2>
                 <p className="text-xs text-gray-500 mt-0.5">{tpl.trigger}</p>
               </div>
-              {/* Toggle */}
               <button
                 type="button"
                 role="switch"
@@ -147,7 +238,6 @@ export default function NotifikasiWaPage() {
                 />
               </button>
             </div>
-            {/* Preview */}
             <pre className="text-xs text-gray-700 bg-gray-50 rounded p-3 whitespace-pre-wrap font-sans border">
               {tpl.preview}
             </pre>

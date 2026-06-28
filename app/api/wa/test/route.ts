@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getClinicFromRequest } from "@/lib/getClinicFromRequest"
 import { sendWhatsApp, WA_TEMPLATES } from "@/lib/whatsapp"
+import { supabaseAdmin } from "@/lib/supabaseAdmin"
 
 const DUMMY_PARAMS = {
   bookingConfirm: WA_TEMPLATES.bookingConfirm({
@@ -42,8 +43,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Nomor HP wajib diisi" }, { status: 400 })
     }
 
+    const { data: clinic } = await supabaseAdmin
+      .from("clinics")
+      .select("fonnte_token")
+      .eq("id", auth.clinicId)
+      .single()
+
     const message = DUMMY_PARAMS[template ?? "bookingConfirm"] ?? DUMMY_PARAMS["bookingConfirm"]
-    const result = await sendWhatsApp(phone, message)
+    const result = await sendWhatsApp(phone, message, clinic?.fonnte_token ?? undefined)
 
     return NextResponse.json(result)
   } catch (err: unknown) {

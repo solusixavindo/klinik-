@@ -41,7 +41,7 @@ export async function PATCH(req: Request) {
     }
 
     const body = await req.json() as Record<string, unknown>
-    const { name, address, phone, email, bank_name, bank_account, bank_holder } = body
+    const { name, address, phone, email, bank_name, bank_account, bank_holder, fonnte_token } = body
 
     const updates: Record<string, unknown> = {}
     if (typeof name === "string") updates.name = name
@@ -51,6 +51,7 @@ export async function PATCH(req: Request) {
     if (typeof bank_name === "string") updates.bank_name = bank_name || null
     if (typeof bank_account === "string") updates.bank_account = bank_account || null
     if (typeof bank_holder === "string") updates.bank_holder = bank_holder || null
+    if (typeof fonnte_token === "string") updates.fonnte_token = fonnte_token || null
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ success: false, error: "Tidak ada perubahan untuk disimpan" }, { status: 400 })
