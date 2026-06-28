@@ -10,8 +10,10 @@ export const runtime = "nodejs"
 // Protect with CRON_SECRET so only Vercel scheduler can call it.
 
 export async function GET(req: Request) {
-  const secret = req.headers.get("x-cron-secret") ?? new URL(req.url).searchParams.get("secret")
-  if (secret !== process.env.CRON_SECRET) {
+  // Vercel sends: Authorization: Bearer <CRON_SECRET>
+  const authHeader = req.headers.get("authorization")
+  const expected = process.env.CRON_SECRET
+  if (!expected || authHeader !== `Bearer ${expected}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
