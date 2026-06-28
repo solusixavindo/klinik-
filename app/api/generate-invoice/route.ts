@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     const { patient, doctor, date, price, clinicName } = await req.json()
     const { data: clinic } = await supabaseAdmin
       .from("clinics")
-      .select("name, logo_url")
+      .select("name, logo_url, bank_account, bank_name, bank_holder")
       .eq("id", auth.clinicId)
       .single()
 
@@ -81,7 +81,12 @@ export async function POST(req: Request) {
 
       doc.moveDown()
       doc.text("Pembayaran:")
-      doc.text(`BCA 123456789 a.n ${name}`)
+      if (clinic?.bank_account && clinic?.bank_name) {
+        const holder = clinic.bank_holder || name
+        doc.text(`${clinic.bank_name} ${clinic.bank_account} a.n ${holder}`)
+      } else {
+        doc.text("Hubungi klinik untuk informasi pembayaran.")
+      }
 
       doc.moveDown()
       doc.text("Terima kasih 🙏", { align: "center" })

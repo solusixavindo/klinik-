@@ -17,9 +17,7 @@ export default async function PelayananPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  console.log('PelayananPage slug:', slug)
   const item = findMenuItemBySlug("pelayanan", slug)
-  console.log('PelayananPage item:', item)
 
   if (!item) notFound()
 

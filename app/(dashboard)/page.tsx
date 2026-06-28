@@ -675,15 +675,15 @@ export default function DashboardPage() {
           </DashboardPanel>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-            <SmallMetric label="Rata-rata Waktu Tunggu" value={`00:${String(avgWaitMinutes).padStart(2, "0")}:30`} note="Jam" icon="◷" />
-            <SmallMetric label="Pasien BPJS" value="68%" note={`${Math.round(stats.patients * 0.68)} Pasien`} icon="▣" />
-            <SmallMetric label="Pasien Umum" value="32%" note={`${Math.round(stats.patients * 0.32)} Pasien`} icon="◇" />
-            <SmallMetric label="Tingkat Kepuasan" value="4.8 / 5" note="Sangat Baik" icon="☆" />
+            <SmallMetric label="Rata-rata Waktu Tunggu" value={`${avgWaitMinutes} mnt`} note="Estimasi hari ini" icon="◷" />
+            <SmallMetric label="Booking Belum Bayar" value={pendingCount.toLocaleString("id-ID")} note="Perlu konfirmasi" icon="▣" />
+            <SmallMetric label="Pasien Baru Bulan Ini" value={newPatientsThisMonth.toLocaleString("id-ID")} note={`${pctChange(newPatientsThisMonth, newPatientsLastMonth)} vs bulan lalu`} icon="◇" />
+            <SmallMetric label="Pendapatan Bulan Ini" value={`Rp ${(revenueThisMonth / 1000).toFixed(0)}rb`} note={`${pctChange(revenueThisMonth, revenueLastMonth)} vs bulan lalu`} icon="☆" />
           </div>
         </div>
 
         <div className="space-y-6">
-          <DashboardPanel title="Demografi Pasien">
+          <DashboardPanel title="Demografi Pasien" action="Rata-rata nasional (ilustrasi)">
             <div className="grid grid-cols-1 items-center gap-4 md:grid-cols-[180px_1fr]">
               <div className="h-44">
                 <ResponsiveContainer width="100%" height="100%">

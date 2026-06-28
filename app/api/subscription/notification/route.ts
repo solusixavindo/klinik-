@@ -31,7 +31,7 @@ export async function POST(req: Request) {
       )
     }
 
-    if (expectedToken && callbackToken !== expectedToken) {
+    if (!expectedToken || callbackToken !== expectedToken) {
       return NextResponse.json(
         { success: false, error: "Token webhook pembayaran tidak valid" },
         { status: 401 }
