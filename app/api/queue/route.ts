@@ -49,7 +49,7 @@ export async function POST(req: Request) {
 
     const date = queue_date || new Date().toISOString().slice(0, 10)
 
-    // Cari nomor antrian berikutnya untuk hari dan tipe ini
+    // Cari nomor antrian berikutnya — retry hingga 5x jika ada konflik nomor
     const { data: lastQueue } = await supabaseAdmin
       .from("queue_entries")
       .select("queue_number")
@@ -60,22 +60,33 @@ export async function POST(req: Request) {
       .limit(1)
       .maybeSingle()
 
-    const nextNumber = (lastQueue?.queue_number ?? 0) + 1
+    let nextNumber = (lastQueue?.queue_number ?? 0) + 1
+    let data = null
+    let error = null
 
-    const { data, error } = await supabaseAdmin
-      .from("queue_entries")
-      .insert([{
-        clinic_id: auth.clinicId,
-        patient_id,
-        doctor_id: doctor_id || null,
-        queue_type,
-        queue_number: nextNumber,
-        queue_date: date,
-        status: "waiting",
-        notes: notes || null,
-      }])
-      .select("*, patients(name, phone), doctors(name, specialization)")
-      .single()
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const result = await supabaseAdmin
+        .from("queue_entries")
+        .insert([{
+          clinic_id: auth.clinicId,
+          patient_id,
+          doctor_id: doctor_id || null,
+          queue_type,
+          queue_number: nextNumber,
+          queue_date: date,
+          status: "waiting",
+          notes: notes || null,
+        }])
+        .select("*, patients(name, phone), doctors(name, specialization)")
+        .single()
+
+      data = result.data
+      error = result.error
+
+      if (!error) break
+      if (error.code === "23505") { nextNumber++; continue }
+      break
+    }
 
     if (error) throw error
 

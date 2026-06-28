@@ -175,7 +175,7 @@ export default function Layout({
       }
     }
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.access_token) {
         fetchSubscription(session.access_token)
       }
@@ -392,23 +392,13 @@ export default function Layout({
           <main className="theme-main rounded-3xl border border-slate-700/20 bg-gradient-to-br from-slate-800/30 to-slate-900/30 backdrop-blur-xl p-6 lg:p-8 shadow-lg min-h-full">
             {/* Header Section */}
             <div className="theme-hero mb-8 rounded-2xl border border-slate-700/20 bg-gradient-to-r from-indigo-950/30 to-slate-900/30 backdrop-blur-sm p-6 shadow-md">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-widest text-indigo-400 font-semibold mb-2">
-                    Platform Manajemen
-                  </p>
-                  <h2 className="text-2xl lg:text-3xl font-bold text-white">
-                    Selamat datang di dashboard
-                  </h2>
-                </div>
-                <div className="flex gap-3 flex-wrap">
-                  <button className="btn-primary text-sm">
-                    ➕ Tambah Data
-                  </button>
-                  <button className="btn-secondary text-sm">
-                    📊 Laporan
-                  </button>
-                </div>
+              <div>
+                <p className="text-xs uppercase tracking-widest text-indigo-400 font-semibold mb-2">
+                  Platform Manajemen
+                </p>
+                <h2 className="text-2xl lg:text-3xl font-bold text-white">
+                  Selamat datang di dashboard
+                </h2>
               </div>
             </div>
 

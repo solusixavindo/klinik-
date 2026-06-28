@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import { getTrialEndDate, isPlanCode, type PlanCode } from "@/lib/billing"
 import { friendlySupabaseSetupMessage, getSupabaseEnvCheck, type SupabaseEnvCheck } from "@/lib/supabaseEnv"
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit"
 
 type RegisterBody = {
   clinic_name?: unknown
@@ -142,6 +143,15 @@ async function recordTrialEvent(clinicId: string, plan: PlanCode, email: string)
 }
 
 export async function POST(req: Request) {
+  const ip = getClientIp(req)
+  const rate = checkRateLimit(ip)
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { success: false, error: "Terlalu banyak percobaan. Coba lagi dalam 1 menit." },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(rate.retryAfterMs / 1000)) } }
+    )
+  }
+
   let step = "init"
   let createdUserId: string | null = null
   let envCheck: SupabaseEnvCheck | undefined
