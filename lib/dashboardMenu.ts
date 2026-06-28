@@ -71,8 +71,8 @@ export const dashboardMenuGroups: DashboardMenuGroup[] = [
       { href: "/operasional/bridging-bpjs", label: "Bridging BPJS", icon: "▥", description: "SEP, rujukan, antrean, klaim, dan integrasi VClaim", requiredFeature: "bpjs_bridging" },
       { href: "/operasional/stok-obat", label: "Stok Obat", icon: "□", description: "Monitor persediaan farmasi", requiredFeature: "inventory_management" },
       { href: "/operasional/notifikasi", label: "Notifikasi / Informasi", icon: "◇", description: "Pusat informasi klinik", requiredFeature: "operational_reports" },
-      { href: "/operasional/reminder-wa", label: "Reminder WhatsApp", icon: "💬", description: "Kirim pengingat kunjungan via WhatsApp", requiredFeature: "booking_system" },
-      { href: "/operasional/tagihan-recurring", label: "Tagihan Berulang", icon: "🔄", description: "Kelola tagihan otomatis pasien rawat jalan rutin" },
+      { href: "/operasional/reminder-wa", label: "Reminder WhatsApp", icon: "💬", description: "Kirim pengingat kunjungan via WhatsApp", requiredFeature: "online_booking" },
+      { href: "/operasional/tagihan-recurring", label: "Tagihan Berulang", icon: "🔄", description: "Kelola tagihan otomatis pasien rawat jalan rutin", requiredFeature: "cashier_system" },
     ],
   },
   {
@@ -80,10 +80,10 @@ export const dashboardMenuGroups: DashboardMenuGroup[] = [
     items: [
       { href: "/pengaturan", label: "Pengaturan Klinik", icon: "⚙", description: "Kelola informasi dan preferensi klinik" },
       { href: "/pengaturan/cabang", label: "Manajemen Cabang", icon: "🏢", description: "Kelola cabang klinik (Premium)", requiredFeature: "multi_branch" },
-      { href: "/pengaturan/booking-online", label: "Booking Online", icon: "🔗", description: "Link booking publik untuk pasien" },
-      { href: "/pengaturan/notifikasi-wa", label: "Notifikasi WhatsApp", icon: "📱", description: "Konfigurasi pesan otomatis ke pasien" },
+      { href: "/pengaturan/booking-online", label: "Booking Online", icon: "🔗", description: "Link booking publik untuk pasien", requiredFeature: "online_booking" },
+      { href: "/pengaturan/notifikasi-wa", label: "Notifikasi WhatsApp", icon: "📱", description: "Konfigurasi pesan otomatis ke pasien", requiredFeature: "online_booking" },
       { href: "/pengaturan/staff", label: "Manajemen Staff", icon: "👤", description: "Undang dan kelola akses tim klinik", requiredFeature: "multi_staff" },
-      { href: "/pengaturan/satusehat", label: "SATU SEHAT", icon: "🏛️", description: "Integrasi platform Kemenkes RI" },
+      { href: "/pengaturan/satusehat", label: "SATU SEHAT", icon: "🏛️", description: "Integrasi platform Kemenkes RI", requiredFeature: "bpjs_registration" },
     ],
   },
 ]
