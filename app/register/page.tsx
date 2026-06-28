@@ -9,10 +9,10 @@ import { toRegisterErrorMessage } from "@/lib/userFacingErrors"
 const paidPlans: PlanCode[] = ["basic", "standard", "pro", "premium"]
 
 const planHighlights: Record<string, string> = {
-  basic:    "Data pasien & dokter · Jadwal dokter · Booking via WA",
-  standard: "Semua Basic + Antrian · Rekam Medis · BPJS",
-  pro:      "Semua Standard + Kasir · Stok Obat · Laboratorium",
-  premium:  "Semua Pro + Multi-cabang · Dashboard advanced",
+  basic:    "Data pasien & dokter · Booking via WA · Maks. 2 user",
+  standard: "Semua Basic + Antrian · Rekam Medis · Booking Online · BPJS",
+  pro:      "Semua Standard + Kasir · Stok Obat · E-Resep & Lab · BPJS Bridging",
+  premium:  "Semua Pro + Multi Cabang · Dashboard Advanced · Prioritas Support",
 }
 
 type TrialForm = {
