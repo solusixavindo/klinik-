@@ -57,10 +57,13 @@ export async function createXenditInvoice(input: XenditInvoiceRequest): Promise<
     }),
   })
 
-  const payload = await response.json().catch(() => null) as Partial<XenditInvoiceResponse> & { message?: string }
+  const payload = await response.json().catch(() => null) as Partial<XenditInvoiceResponse> & { message?: string; error_code?: string }
 
   if (!response.ok || !payload?.invoice_url || !payload.id || !payload.external_id) {
-    throw new Error(payload?.message || "Gagal membuat invoice Xendit")
+    if (response.status === 401 || response.status === 403 || payload?.error_code === "API_KEY_INVALID") {
+      throw new Error("XENDIT_SECRET_KEY tidak valid atau tidak punya izin. Periksa API key di dashboard Xendit (xnd_production_... atau xnd_development_...) dan update di Vercel → Environment Variables.")
+    }
+    throw new Error(payload?.message || `Xendit error ${response.status}`)
   }
 
   return payload as XenditInvoiceResponse
