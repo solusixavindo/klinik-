@@ -31,17 +31,20 @@ export async function GET(
       return NextResponse.json({ success: false, error: "Booking online tidak aktif untuk klinik ini" }, { status: 403 })
     }
 
-    // Fetch active doctors
-    const { data: doctors, error: doctorsError } = await supabaseAdmin
+    // Fetch doctors — filter is_active in code in case column doesn't exist
+    const { data: doctorsRaw, error: doctorsError } = await supabaseAdmin
       .from("doctors")
       .select("id, name, specialization, is_active")
       .eq("clinic_id", clinic.id)
-      .eq("is_active", true)
       .order("name", { ascending: true })
+
+    const doctors = (doctorsRaw ?? []).filter(
+      (d) => d.is_active === undefined || d.is_active === null || d.is_active === true
+    )
 
     if (doctorsError) {
       console.error("GET /api/public/clinic/[slug] doctors:", doctorsError)
-      return NextResponse.json({ success: false, error: doctorsError.message }, { status: 500 })
+      // Non-fatal: return clinic data even if doctors query fails
     }
 
     // Fetch schedules for those doctors
@@ -58,10 +61,10 @@ export async function GET(
 
       if (schedulesError) {
         console.error("GET /api/public/clinic/[slug] schedules:", schedulesError)
-        return NextResponse.json({ success: false, error: schedulesError.message }, { status: 500 })
+        // Non-fatal: return doctors without schedules
+      } else {
+        schedules = schedulesData ?? []
       }
-
-      schedules = schedulesData ?? []
     }
 
     return NextResponse.json({
@@ -69,11 +72,11 @@ export async function GET(
       clinic: {
         id: clinic.id,
         name: clinic.name,
-        address: clinic.address,
-        phone: clinic.phone,
+        address: clinic.address ?? null,
+        phone: clinic.phone ?? null,
         slug: clinic.slug,
       },
-      doctors: doctors ?? [],
+      doctors,
       schedules,
     })
   } catch (err: unknown) {

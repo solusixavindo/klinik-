@@ -128,6 +128,7 @@ export default function PublicBookingPage() {
 
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [notFoundMsg, setNotFoundMsg] = useState("")
   const [clinic, setClinic] = useState<ClinicData | null>(null)
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [schedules, setSchedules] = useState<Schedule[]>([])
@@ -152,6 +153,7 @@ export default function PublicBookingPage() {
       .then((r) => r.json())
       .then((data) => {
         if (!data.success) {
+          setNotFoundMsg(data.error ?? "Klinik tidak ditemukan")
           setNotFound(true)
         } else {
           setClinic(data.clinic)
@@ -159,7 +161,7 @@ export default function PublicBookingPage() {
           setSchedules(data.schedules ?? [])
         }
       })
-      .catch(() => setNotFound(true))
+      .catch(() => { setNotFoundMsg("Gagal memuat halaman booking"); setNotFound(true) })
       .finally(() => setLoading(false))
   }, [slug])
 
@@ -311,9 +313,15 @@ export default function PublicBookingPage() {
       <div style={containerStyle}>
         <div style={{ marginTop: 60, ...cardStyle, textAlign: "center" }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🏥</div>
-          <h2 style={{ color: "#1e293b", marginTop: 0 }}>Klinik tidak ditemukan</h2>
+          <h2 style={{ color: "#1e293b", marginTop: 0 }}>
+            {notFoundMsg === "Booking online tidak aktif untuk klinik ini"
+              ? "Booking Online Tidak Tersedia"
+              : "Halaman Tidak Ditemukan"}
+          </h2>
           <p style={{ color: "#64748b", lineHeight: 1.6 }}>
-            Hubungi klinik Anda untuk mendapatkan link booking yang benar.
+            {notFoundMsg === "Booking online tidak aktif untuk klinik ini"
+              ? "Klinik ini saat ini tidak menerima booking online. Silakan hubungi klinik langsung."
+              : notFoundMsg || "Hubungi klinik Anda untuk mendapatkan link booking yang benar."}
           </p>
         </div>
       </div>
