@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { supabase } from "@/lib/supabase"
 
 const TEMPLATES = [
   {
@@ -71,9 +72,11 @@ export default function NotifikasiWaPage() {
     setTestLoading(true)
     setTestResult(null)
     try {
+      const { data } = await supabase.auth.getSession()
+      const token = data.session?.access_token ?? ""
       const res = await fetch("/api/wa/test", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ phone: testPhone, template: testTemplate }),
       })
       const d = await res.json() as { success: boolean; error?: string }
