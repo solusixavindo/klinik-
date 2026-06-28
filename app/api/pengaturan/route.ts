@@ -4,7 +4,7 @@ import { getClinicFromRequest } from "@/lib/getClinicFromRequest"
 
 export const runtime = "nodejs"
 
-const CLINIC_SELECT = "id, name, address, phone, email, slug, logo_url, online_booking_enabled, plan, subscription_status, trial_ends_at, current_period_end"
+const CLINIC_SELECT = "*"
 
 function errMsg(err: unknown, fallback: string): string {
   if (err instanceof Error) return err.message
