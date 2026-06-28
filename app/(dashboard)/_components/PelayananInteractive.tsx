@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
+import { hasPlanFeature, PlanCode } from "@/lib/billing"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared helpers
@@ -123,6 +124,8 @@ function rxItemsToText(items: RxItem[]): string {
 }
 
 export function PrescriptionWrapper() {
+  const [planCode, setPlanCode] = useState<PlanCode | null>(null)
+  const [planChecked, setPlanChecked] = useState(false)
   const [records, setRecords] = useState<MedRecord[]>([])
   const [patients, setPatients] = useState<Patient[]>([])
   const [doctors, setDoctors] = useState<Doctor[]>([])
@@ -138,6 +141,17 @@ export function PrescriptionWrapper() {
   const [form, setForm] = useState(emptyRxForm)
   const [rxItems, setRxItems] = useState<RxItem[]>([emptyRxItem()])
   const [suggestions, setSuggestions] = useState<string[][]>([[]])
+
+  useEffect(() => {
+    const checkPlan = async () => {
+      const token = await getToken()
+      const res = await fetch("/api/subscription", { headers: { Authorization: `Bearer ${token}` } })
+      const data = await res.json()
+      setPlanCode((data.subscription?.plan?.code as PlanCode) ?? null)
+      setPlanChecked(true)
+    }
+    checkPlan()
+  }, [])
 
   const loadData = useCallback(async (patId?: string) => {
     setLoading(true)
@@ -265,6 +279,37 @@ export function PrescriptionWrapper() {
   const printRecord = (r: MedRecord) => {
     setDetail(r)
     setTimeout(() => window.print(), 150)
+  }
+
+  if (!planChecked) {
+    return <div className="flex items-center justify-center py-20"><div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-700 border-t-indigo-500" /></div>
+  }
+
+  if (!hasPlanFeature(planCode ?? undefined, "inventory_management")) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest text-indigo-400">Pelayanan</p>
+          <h1 className="mt-1 text-2xl font-bold text-white">E-Resep</h1>
+        </div>
+        <div className="rounded-3xl border border-indigo-500/20 bg-gradient-to-br from-indigo-950/20 to-slate-900/20 p-10 text-center shadow-lg">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-indigo-600/20">
+            <span className="text-4xl">💊</span>
+          </div>
+          <h2 className="mb-3 text-xl font-bold text-white">E-Resep Digital</h2>
+          <p className="mx-auto mb-2 max-w-md text-slate-400">
+            Fitur ini tersedia mulai paket <span className="font-semibold text-white">Profesional</span>.
+          </p>
+          <p className="mx-auto mb-8 max-w-md text-sm text-slate-500">
+            Tulis resep terstruktur, autocomplete dari stok obat, cetak resep profesional, kirim via WhatsApp, dan lacak status ditebus.
+          </p>
+          <a href="/billing" className="inline-block rounded-2xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white hover:bg-indigo-500 transition">
+            Upgrade ke Paket Profesional →
+          </a>
+          <p className="mt-4 text-xs text-slate-500">Paket saat ini: <span className="capitalize text-slate-300">{planCode ?? "trial"}</span></p>
+        </div>
+      </div>
+    )
   }
 
   return (
