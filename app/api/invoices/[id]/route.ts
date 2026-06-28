@@ -38,7 +38,7 @@ export async function GET(
       )
     }
 
-    const [{ data: invoice, error }, { data: clinic }] = await Promise.all([
+    const [{ data: invoice, error }, clinicResult] = await Promise.all([
       supabaseAdmin
         .from("bookings")
         .select("*, patients(name, phone), doctors(name)")
@@ -51,6 +51,8 @@ export async function GET(
         .eq("id", profile.clinic_id)
         .single(),
     ])
+    // Gracefully handle if bank columns don't exist yet
+    const clinic = clinicResult.error ? null : clinicResult.data
 
     if (error || !invoice) {
       return NextResponse.json(

@@ -19,6 +19,9 @@ type ClinicSettings = {
   subscription_status: string
   trial_ends_at: string | null
   current_period_end: string | null
+  bank_name: string | null
+  bank_account: string | null
+  bank_holder: string | null
 }
 
 export default function PengaturanPage() {
@@ -27,7 +30,7 @@ export default function PengaturanPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
-  const [form, setForm] = useState({ name: "", address: "", phone: "", email: "" })
+  const [form, setForm] = useState({ name: "", address: "", phone: "", email: "", bank_name: "", bank_account: "", bank_holder: "" })
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState("")
   const [uploadingLogo, setUploadingLogo] = useState(false)
@@ -48,6 +51,9 @@ export default function PengaturanPage() {
         address: data.clinic.address ?? "",
         phone: data.clinic.phone ?? "",
         email: data.clinic.email ?? "",
+        bank_name: data.clinic.bank_name ?? "",
+        bank_account: data.clinic.bank_account ?? "",
+        bank_holder: data.clinic.bank_holder ?? "",
       })
       setLogoPreview(data.clinic.logo_url ?? "")
     } catch (err: unknown) {
@@ -211,6 +217,25 @@ export default function PengaturanPage() {
                 <input type="text" value={form.address} onChange={(e) => f(e.target.value, "address")} className="input" placeholder="Jl. ..." />
               </div>
             </div>
+            {/* Bank info */}
+            <div className="pt-2 border-t border-slate-700/20">
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">Informasi Rekening Bank (untuk Invoice)</p>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div>
+                  <label className="label">Nama Bank</label>
+                  <input type="text" value={form.bank_name} onChange={(e) => f(e.target.value, "bank_name")} className="input" placeholder="contoh: CIMB Niaga" />
+                </div>
+                <div>
+                  <label className="label">Nomor Rekening</label>
+                  <input type="text" value={form.bank_account} onChange={(e) => f(e.target.value, "bank_account")} className="input" placeholder="800211236800" />
+                </div>
+                <div>
+                  <label className="label">Atas Nama</label>
+                  <input type="text" value={form.bank_holder} onChange={(e) => f(e.target.value, "bank_holder")} className="input" placeholder="Nama pemilik rekening" />
+                </div>
+              </div>
+            </div>
+
             {clinic?.slug && (
               <div>
                 <label className="label">Slug Booking Online</label>
