@@ -73,6 +73,18 @@ export default function DemoPage() {
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#172554_0,#020617_38%,#111827_100%)] text-slate-100">
       {showModal && <DemoModal onClose={() => setShowModal(false)} />}
+
+      {/* Sticky top conversion bar */}
+      <div className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-indigo-500/20 bg-slate-950/90 px-4 py-2.5 backdrop-blur-xl">
+        <p className="text-xs font-medium text-slate-300">
+          <span className="hidden sm:inline">Anda sedang melihat demo interaktif XaviKlinika. </span>
+          <span className="text-amber-300 font-semibold">Gratis 14 hari</span> — tidak perlu kartu kredit.
+        </p>
+        <Link href="/register" className="shrink-0 rounded-xl bg-indigo-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-indigo-500 transition">
+          Daftar Gratis →
+        </Link>
+      </div>
+
       <div className="grid min-h-screen lg:grid-cols-[310px_1fr]">
         <aside className="hidden border-r border-slate-700/30 bg-slate-950/75 p-6 shadow-2xl shadow-black/30 backdrop-blur-xl lg:flex lg:flex-col">
           <Brand />

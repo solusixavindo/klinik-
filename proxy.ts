@@ -23,6 +23,7 @@ const publicApiRoutes = [
   "/api/register/diagnostics",
   "/api/xendit",
   "/api/subscription/notification",
+  "/api/cron/trial-reminder",
 ]
 
 function normalizePathname(pathname: string) {

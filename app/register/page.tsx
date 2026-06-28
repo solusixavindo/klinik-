@@ -6,8 +6,14 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { PLANS, type PlanCode } from "@/lib/billing"
 import { toRegisterErrorMessage } from "@/lib/userFacingErrors"
 
-const trialPlans: PlanCode[] = ["trial", "basic", "standard", "pro", "premium"]
-const planLabel = (plan: PlanCode) => plan === "trial" ? "Trial 14 Hari" : PLANS[plan].name
+const paidPlans: PlanCode[] = ["basic", "standard", "pro", "premium"]
+
+const planHighlights: Record<string, string[]> = {
+  basic:    ["Data pasien & dokter", "Jadwal dokter", "Booking sederhana"],
+  standard: ["Semua Basic +", "Antrian & Rekam Medis", "Operasional & BPJS"],
+  pro:      ["Semua Standard +", "Kasir & Invoice", "Stok Obat & Laboratorium"],
+  premium:  ["Semua Pro +", "Multi-cabang", "Dashboard advanced"],
+}
 
 type TrialForm = {
   clinicName: string
@@ -28,7 +34,7 @@ function RegisterPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const planFromUrl = searchParams.get("plan") as PlanCode | null
-  const initialPlan = planFromUrl && trialPlans.includes(planFromUrl) ? planFromUrl : ""
+  const initialPlan = planFromUrl && paidPlans.includes(planFromUrl) ? planFromUrl : ""
 
   const [form, setForm] = useState<TrialForm>({
     clinicName: "",
@@ -51,12 +57,10 @@ function RegisterPageInner() {
       setError("Nama klinik, email, dan password wajib diisi.")
       return
     }
-
     if (!form.plan) {
-      setError("Pilih paket trial terlebih dahulu.")
+      setError("Pilih paket terlebih dahulu.")
       return
     }
-
     if (form.password.length < 8) {
       setError("Password minimal 8 karakter.")
       return
@@ -78,7 +82,7 @@ function RegisterPageInner() {
           package: form.plan,
         }),
       })
-      const data = await res.json() as { success?: boolean; error?: string; email?: string }
+      const data = await res.json() as { success?: boolean; error?: string }
 
       if (!res.ok || !data.success) {
         throw new Error(data.error || "Pendaftaran belum berhasil. Mohon coba lagi.")
@@ -94,6 +98,8 @@ function RegisterPageInner() {
     }
   }
 
+  const selectedPlan = form.plan ? PLANS[form.plan] : null
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 px-4 py-8">
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
@@ -101,40 +107,41 @@ function RegisterPageInner() {
         <div className="absolute bottom-0 left-0 h-96 w-96 rounded-full bg-purple-600/10 blur-3xl" />
       </div>
 
-      <div className="relative mx-auto w-full max-w-5xl">
-        <header className="mb-8 text-center">
+      <div className="relative mx-auto w-full max-w-6xl">
+        <header className="mb-10 text-center">
           <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 text-2xl font-bold text-white shadow-lg shadow-indigo-600/20">
             X
           </div>
           <h1 className="text-3xl font-bold text-white">Mulai Trial Gratis 14 Hari</h1>
-          <p className="mt-2 text-slate-400">Buat akun klinik Anda dan mulai kelola operasional secara digital.</p>
+          <p className="mt-2 text-slate-400">Pilih paket, daftar, dan nikmati semua fitur gratis selama 14 hari. Tanpa kartu kredit.</p>
         </header>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,480px)_1fr] lg:items-start">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,440px)_1fr] lg:items-start">
+          {/* Form */}
           <section className="rounded-3xl border border-slate-700/30 bg-gradient-to-b from-slate-800/50 to-slate-900/50 p-8 shadow-2xl backdrop-blur-xl">
             <div className="mb-6">
-              <p className="text-xs font-bold uppercase tracking-widest text-indigo-300">Trial Gratis</p>
-              <h2 className="mt-2 text-2xl font-bold text-white">Daftarkan klinik Anda</h2>
-              <p className="mt-2 text-sm text-slate-400">Tidak perlu kartu kredit. Setup cepat untuk mulai operasional digital.</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-indigo-300">Daftar Sekarang</p>
+              <h2 className="mt-2 text-2xl font-bold text-white">Buat akun klinik Anda</h2>
+              <p className="mt-2 text-sm text-slate-400">Tidak perlu kartu kredit. Aktif dalam 5 menit.</p>
             </div>
 
             {error && (
-              <div className="mb-6 rounded-2xl border border-red-700/30 bg-red-950/30 p-4 text-sm text-red-300">
+              <div className="mb-5 rounded-2xl border border-red-700/30 bg-red-950/30 p-4 text-sm text-red-300">
                 {error}
               </div>
             )}
             {success && (
-              <div className="mb-6 rounded-2xl border border-emerald-700/30 bg-emerald-950/30 p-4 text-sm text-emerald-300">
+              <div className="mb-5 rounded-2xl border border-emerald-700/30 bg-emerald-950/30 p-4 text-sm text-emerald-300">
                 {success}
               </div>
             )}
 
-            <div className="space-y-5">
+            <div className="space-y-4">
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-200">Nama Klinik</label>
                 <input
                   type="text"
-                  placeholder="Nama klinik"
+                  placeholder="Nama klinik Anda"
                   value={form.clinicName}
                   onChange={(e) => updateForm({ clinicName: e.target.value })}
                   onKeyDown={(e) => e.key === "Enter" && handleRegister()}
@@ -152,7 +159,7 @@ function RegisterPageInner() {
                   onKeyDown={(e) => e.key === "Enter" && handleRegister()}
                   className="input"
                 />
-                <p className="mt-1 text-xs text-slate-500">Gunakan email aktif untuk login ke dashboard.</p>
+                <p className="mt-1 text-xs text-slate-500">Digunakan untuk login ke dashboard.</p>
               </div>
 
               <div>
@@ -168,19 +175,24 @@ function RegisterPageInner() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-200">Paket Trial</label>
+                <label className="mb-2 block text-sm font-semibold text-slate-200">Pilih Paket</label>
                 <select
                   value={form.plan}
                   onChange={(e) => updateForm({ plan: e.target.value as PlanCode | "" })}
                   className="input"
                 >
-                  <option value="">Pilih paket trial</option>
-                  {trialPlans.map((plan) => (
+                  <option value="">— Pilih paket Anda —</option>
+                  {paidPlans.map((plan) => (
                     <option key={plan} value={plan}>
-                      {planLabel(plan)} - {PLANS[plan].priceLabel}
+                      {PLANS[plan].name} — gratis 14 hari, lalu {PLANS[plan].priceLabel}
                     </option>
                   ))}
                 </select>
+                {selectedPlan && (
+                  <p className="mt-2 text-xs text-indigo-300">
+                    ✓ {planHighlights[form.plan]?.join(" · ")}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -188,19 +200,27 @@ function RegisterPageInner() {
               type="button"
               onClick={handleRegister}
               disabled={loading}
-              className="btn-primary mt-8 w-full py-3"
+              className="btn-primary mt-7 w-full py-3 text-base"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  Menyiapkan trial...
+                  Menyiapkan akun...
                 </span>
               ) : (
-                "Mulai Trial Gratis 14 Hari"
+                "Mulai Gratis 14 Hari →"
               )}
             </button>
 
-            <p className="mt-6 text-center text-sm text-slate-400">
+            <div className="mt-5 flex items-center justify-center gap-4 text-xs text-slate-500">
+              <span>✓ Tanpa kartu kredit</span>
+              <span>·</span>
+              <span>✓ Batalkan kapan saja</span>
+              <span>·</span>
+              <span>✓ Data aman</span>
+            </div>
+
+            <p className="mt-5 text-center text-sm text-slate-400">
               Sudah punya akun?{" "}
               <Link href="/login" className="font-semibold text-indigo-400 hover:text-indigo-300">
                 Login di sini
@@ -208,22 +228,67 @@ function RegisterPageInner() {
             </p>
           </section>
 
-          <aside className="rounded-3xl border border-slate-700/30 bg-slate-900/45 p-8 shadow-2xl backdrop-blur-xl">
-            <p className="text-xs font-bold uppercase tracking-widest text-indigo-300">Mulai Lebih Rapi</p>
-            <h2 className="mt-2 text-2xl font-bold text-white">Trial siap untuk operasional klinik Anda</h2>
-            <div className="mt-6 space-y-4 text-sm text-slate-300">
-              <p><span className="text-emerald-400">✓</span> Dashboard siap digunakan untuk klinik Anda</p>
-              <p><span className="text-emerald-400">✓</span> Data klinik tersimpan secara terpisah dan aman</p>
-              <p><span className="text-emerald-400">✓</span> Pilih paket sesuai kebutuhan operasional</p>
-              <p><span className="text-emerald-400">✓</span> Bisa upgrade kapan saja setelah trial</p>
+          {/* Plan comparison */}
+          <aside className="space-y-4">
+            <div className="rounded-3xl border border-slate-700/30 bg-slate-900/45 px-6 py-5 shadow-xl backdrop-blur-xl">
+              <p className="text-xs font-bold uppercase tracking-widest text-indigo-300">Semua Paket Gratis 14 Hari</p>
+              <p className="mt-1 text-lg font-bold text-white">Pilih paket sesuai ukuran klinik Anda</p>
             </div>
 
-            <div className="mt-8 rounded-2xl border border-indigo-500/20 bg-indigo-500/10 p-5">
-              <p className="font-semibold text-indigo-100">Ingin lihat fitur terlebih dahulu?</p>
-              <p className="mt-2 text-sm text-slate-400">Jelajahi tampilan dashboard lengkap sebelum membuat akun trial.</p>
-              <Link href="/demo" className="btn-secondary mt-4 w-full">
-                Coba Demo Interaktif
-              </Link>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {paidPlans.map((code) => {
+                const plan = PLANS[code]
+                const isSelected = form.plan === code
+                const accent = code === "premium" ? "border-amber-500/40 bg-amber-950/10" : code === "pro" ? "border-indigo-500/30 bg-indigo-950/10" : "border-slate-700/30 bg-slate-900/40"
+                const badge = code === "pro" ? "bg-indigo-600/20 text-indigo-300 border-indigo-500/30" : code === "premium" ? "bg-amber-600/20 text-amber-300 border-amber-500/30" : "bg-slate-700/20 text-slate-400 border-slate-600/20"
+                return (
+                  <button
+                    key={code}
+                    type="button"
+                    onClick={() => updateForm({ plan: code })}
+                    className={`rounded-3xl border p-5 text-left transition-all ${accent} ${isSelected ? "ring-2 ring-indigo-500/60 shadow-lg shadow-indigo-600/10" : "hover:border-slate-600/60"}`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <span className={`rounded-full border px-2 py-0.5 text-xs font-bold ${badge}`}>{plan.name}</span>
+                      {isSelected && <span className="text-xs font-bold text-indigo-400">✓ Dipilih</span>}
+                    </div>
+                    <p className="mt-3 text-lg font-bold text-white">{plan.priceLabel}</p>
+                    <p className="text-xs text-slate-500">setelah 14 hari gratis</p>
+                    <ul className="mt-3 space-y-1">
+                      {planHighlights[code].map((f) => (
+                        <li key={f} className="text-xs text-slate-300">
+                          <span className="mr-1 text-emerald-400">✓</span>{f}
+                        </li>
+                      ))}
+                    </ul>
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="rounded-3xl border border-emerald-700/20 bg-emerald-950/10 p-5">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">🎉</span>
+                <div>
+                  <p className="font-semibold text-white">14 Hari Pertama Gratis</p>
+                  <p className="mt-1 text-sm text-slate-400">
+                    Gunakan semua fitur paket pilihan Anda tanpa biaya. Di hari ke-12, kami ingatkan via WhatsApp sebelum masa trial berakhir.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 text-center">
+              {[
+                ["5 menit", "Waktu setup"],
+                ["100%", "Data aman"],
+                ["0 rupiah", "Hari pertama"],
+              ].map(([val, label]) => (
+                <div key={label} className="rounded-2xl border border-slate-700/30 bg-slate-900/40 p-4">
+                  <p className="text-lg font-bold text-white">{val}</p>
+                  <p className="mt-0.5 text-xs text-slate-500">{label}</p>
+                </div>
+              ))}
             </div>
           </aside>
         </div>
