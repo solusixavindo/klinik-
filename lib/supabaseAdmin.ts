@@ -2,9 +2,21 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 
 let cachedClient: SupabaseClient | null = null
 
+function sanitizeSupabaseUrl(raw: string | undefined): string | undefined {
+  if (!raw) return undefined
+  // Strip all whitespace (including embedded \n \t \r from copy-paste) and quotes
+  const cleaned = raw.replace(/\s+/g, "").replace(/^["'`]+|["'`]+$/g, "")
+  try {
+    // Use URL.origin to get only scheme+host, stripping any accidental path/fragment
+    return new URL(cleaned).origin
+  } catch {
+    return cleaned || undefined
+  }
+}
+
 function getSupabaseAdminClient(): SupabaseClient {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, "")
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const supabaseUrl = sanitizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL)
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
 
   if (!supabaseUrl || !serviceRoleKey) {
     throw new Error(

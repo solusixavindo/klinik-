@@ -1,6 +1,8 @@
 import { createClient } from "@supabase/supabase-js"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, "")
+const rawSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\s+/g, "").replace(/^["'`]+|["'`]+$/g, "") ?? ""
+let supabaseUrl: string
+try { supabaseUrl = new URL(rawSupabaseUrl).origin } catch { supabaseUrl = rawSupabaseUrl }
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
