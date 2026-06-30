@@ -131,6 +131,7 @@ export default function PatientsPage() {
           <p className="text-slate-400">Total pasien: <span className="font-semibold text-indigo-400">{data.length}</span></p>
         </div>
         <button
+          id="btn-tambah-pasien"
           onClick={() => {
             setShowForm(!showForm)
             if (editId) {
@@ -236,9 +237,19 @@ export default function PatientsPage() {
             {[...Array(5)].map((_, i) => <SkeletonCard key={i} />)}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="rounded-3xl border border-slate-700/20 bg-gradient-to-br from-slate-800/30 to-slate-900/20 backdrop-blur-xl p-12 text-center">
-            <p className="text-slate-400 text-lg">Belum ada data pasien</p>
-            <p className="text-slate-500 text-sm mt-2">Mulai tambahkan pasien baru untuk memulai</p>
+          <div className="rounded-3xl border border-slate-700/20 bg-gradient-to-br from-slate-800/30 to-slate-900/20 p-16 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-600/10 text-3xl">👤</div>
+            <h3 className="text-lg font-bold text-white">{data.length === 0 ? "Belum ada pasien terdaftar" : "Tidak ada hasil pencarian"}</h3>
+            <p className="mt-2 text-sm text-slate-400">
+              {data.length === 0
+                ? "Mulai daftarkan pasien pertama klinik Anda untuk memulai operasional."
+                : "Coba ubah kata kunci pencarian Anda."}
+            </p>
+            {data.length === 0 && (
+              <button onClick={() => document.getElementById("btn-tambah-pasien")?.click()} className="btn-primary mt-6 inline-flex">
+                + Tambah Pasien Pertama
+              </button>
+            )}
           </div>
         ) : (
           filtered.map((p) => (

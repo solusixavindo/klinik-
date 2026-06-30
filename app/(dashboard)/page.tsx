@@ -161,10 +161,10 @@ const quickAccess = [
 const menuItemByHref = new Map(allDashboardMenuItems.map((item) => [item.href, item]))
 
 const demographics = [
-  { name: "Anak-anak", value: 15, color: "#8b5cf6" },
-  { name: "Dewasa", value: 40, color: "#3b82f6" },
-  { name: "Dewasa Tua", value: 30, color: "#14b8a6" },
-  { name: "Lansia", value: 15, color: "#f43f5e" },
+  { name: "Anak-anak (0–12)", value: 15, color: "#8b5cf6" },
+  { name: "Remaja (13–17)", value: 10, color: "#3b82f6" },
+  { name: "Dewasa (18–59)", value: 55, color: "#14b8a6" },
+  { name: "Lansia (60+)", value: 20, color: "#f43f5e" },
 ]
 
 function pctChange(current: number, previous: number): string {
@@ -352,75 +352,92 @@ export default function DashboardPage() {
   const pendingCount = bookings.filter((b) => b.payment_status !== "paid").length
   const avgWaitMinutes = Math.max(12, Math.min(55, 18 + bookings.length * 2))
   const activePlanCode = subscription?.plan.code
+  const isNewUser = !loading && stats.patients === 0 && stats.doctors === 0
+  const trialDaysLeft = subscription?.status === "trialing" ? subscription.days_remaining : null
+  const trialExpiringSoon = trialDaysLeft !== null && trialDaysLeft <= 5
 
-  // Section 1 — 6 Stats Cards
-  const statCards = [
+  const nextPlanMap: Record<string, { code: string; name: string; benefit: string }> = {
+    basic:    { code: "standard", name: "Standard", benefit: "Buka antrian, rekam medis, dan booking online pasien." },
+    standard: { code: "pro",      name: "Profesional", benefit: "Buka kasir, stok obat, e-resep, dan laboratorium." },
+    pro:      { code: "premium",  name: "Premium", benefit: "Buka multi cabang, dashboard advanced, dan prioritas support." },
+  }
+  const nextPlan = activePlanCode ? nextPlanMap[activePlanCode] : null
+
+  const hasQueue    = hasPlanFeature(activePlanCode, "queue_management")
+  const hasRevenue  = hasPlanFeature(activePlanCode, "financial_reports")
+  const hasStock    = hasPlanFeature(activePlanCode, "inventory_management")
+  const hasCashier  = hasPlanFeature(activePlanCode, "cashier_system")
+
+  // Stat cards — only show cards relevant to current plan
+  const allStatCards = [
     {
       label: "Kunjungan Hari Ini",
       value: todayStats.total.toLocaleString("id-ID"),
       delta: `${todayStats.done} selesai · ${todayStats.pending} pending`,
-      deltaLabel: "",
       Icon: CalendarCheck,
       href: "/bookings",
       deltaColor: "text-sky-400",
       cardBg: "from-sky-950/40 to-slate-900/30 border-sky-700/20",
       iconBg: "bg-sky-600/15 text-sky-300",
+      show: true,
     },
     {
-      label: "Revenue Bulan Ini",
-      value: `Rp ${currencyFormatter.format(revenueThisMonth)}`,
-      delta: pctChange(revenueThisMonth, revenueLastMonth),
-      deltaLabel: "vs bulan lalu",
-      Icon: TrendingUp,
-      href: "/laporan/pendapatan",
-      deltaColor: revenueThisMonth >= revenueLastMonth ? "text-emerald-400" : "text-rose-400",
-      cardBg: "from-emerald-950/40 to-slate-900/30 border-emerald-700/20",
-      iconBg: "bg-emerald-600/15 text-emerald-300",
-    },
-    {
-      label: "Pasien Baru Bulan Ini",
-      value: newPatientsThisMonth.toLocaleString("id-ID"),
-      delta: pctChange(newPatientsThisMonth, newPatientsLastMonth),
-      deltaLabel: "vs bulan lalu",
+      label: "Total Pasien",
+      value: stats.patients.toLocaleString("id-ID"),
+      delta: `+${newPatientsThisMonth} pasien bulan ini`,
       Icon: UserPlus,
       href: "/patients",
-      deltaColor: newPatientsThisMonth >= newPatientsLastMonth ? "text-emerald-400" : "text-rose-400",
+      deltaColor: "text-blue-400",
       cardBg: "from-blue-950/40 to-slate-900/30 border-blue-700/20",
       iconBg: "bg-blue-600/15 text-blue-300",
-    },
-    {
-      label: "Antrian Aktif",
-      value: (queueNow.waiting + queueNow.called).toLocaleString("id-ID"),
-      delta: `${queueNow.serving} dilayani`,
-      deltaLabel: "",
-      Icon: Clock,
-      href: "/pelayanan/antrian-poli",
-      deltaColor: "text-amber-400",
-      cardBg: "from-amber-950/40 to-slate-900/30 border-amber-700/20",
-      iconBg: "bg-amber-600/15 text-amber-300",
+      show: true,
     },
     {
       label: "Total Dokter Aktif",
       value: stats.doctors.toLocaleString("id-ID"),
       delta: "dokter terdaftar",
-      deltaLabel: "",
       Icon: Stethoscope,
       href: "/doctors",
       deltaColor: "text-violet-400",
       cardBg: "from-violet-950/40 to-slate-900/30 border-violet-700/20",
       iconBg: "bg-violet-600/15 text-violet-300",
+      show: true,
+    },
+    {
+      label: "Antrian Aktif",
+      value: (queueNow.waiting + queueNow.called).toLocaleString("id-ID"),
+      delta: `${queueNow.serving} sedang dilayani`,
+      Icon: Clock,
+      href: "/pelayanan/antrian-poli",
+      deltaColor: "text-amber-400",
+      cardBg: "from-amber-950/40 to-slate-900/30 border-amber-700/20",
+      iconBg: "bg-amber-600/15 text-amber-300",
+      show: hasQueue,
+    },
+    {
+      label: "Revenue Bulan Ini",
+      value: `Rp ${currencyFormatter.format(revenueThisMonth)}`,
+      delta: `${pctChange(revenueThisMonth, revenueLastMonth)} vs bulan lalu`,
+      Icon: TrendingUp,
+      href: "/laporan/pendapatan",
+      deltaColor: revenueThisMonth >= revenueLastMonth ? "text-emerald-400" : "text-rose-400",
+      cardBg: "from-emerald-950/40 to-slate-900/30 border-emerald-700/20",
+      iconBg: "bg-emerald-600/15 text-emerald-300",
+      show: hasRevenue,
     },
     {
       label: "Stok Menipis",
       value: lowStockCount.toLocaleString("id-ID"),
       delta: lowStockCount > 0 ? "perlu restock segera" : "semua stok aman",
-      deltaLabel: "",
       Icon: PackageOpen,
       href: "/operasional/stok-obat",
       deltaColor: lowStockCount > 0 ? "text-rose-400" : "text-emerald-400",
       cardBg: lowStockCount > 0 ? "from-rose-950/40 to-slate-900/30 border-rose-700/20" : "from-slate-800/40 to-slate-900/30 border-slate-700/20",
       iconBg: lowStockCount > 0 ? "bg-rose-600/15 text-rose-300" : "bg-slate-600/15 text-slate-300",
+      show: hasStock,
     },
+  ]
+  const statCards = allStatCards.filter((c) => c.show)
   ]
 
   const canOpenHref = (href: string) => {
@@ -498,19 +515,64 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Upgrade Banner */}
-      {subscription?.plan.name !== "Premium" && (
-        <div className="rounded-3xl border border-indigo-500/20 bg-gradient-to-br from-indigo-950/20 to-slate-900/20 p-6 shadow-lg">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      {/* Onboarding checklist — hanya tampil saat klinik baru (belum ada data) */}
+      {isNewUser && (
+        <div className="rounded-3xl border border-indigo-500/30 bg-gradient-to-br from-indigo-950/30 to-slate-900/20 p-6 shadow-lg">
+          <p className="text-xs font-bold uppercase tracking-widest text-indigo-400">Mulai dari sini</p>
+          <h2 className="mt-2 text-xl font-bold text-white">Selamat datang! Selesaikan langkah berikut untuk memulai 🎉</h2>
+          <p className="mt-1 text-sm text-slate-400">Klinik Anda sudah aktif. Ikuti panduan ini agar sistem siap digunakan.</p>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { step: 1, label: "Pengaturan Klinik", desc: "Isi nama, alamat, dan nomor WA klinik", href: "/pengaturan", icon: "⚙️" },
+              { step: 2, label: "Tambah Dokter", desc: "Daftarkan dokter yang bertugas", href: "/doctors", icon: "🩺" },
+              { step: 3, label: "Atur Jadwal", desc: "Tentukan jam praktik tiap dokter", href: "/schedules", icon: "📅" },
+              { step: 4, label: "Pasien Pertama", desc: "Daftarkan pasien dan buat booking", href: "/patients", icon: "👤" },
+            ].map((item) => (
+              <Link key={item.step} href={item.href}>
+                <div className="h-full rounded-2xl border border-slate-700/20 bg-slate-900/40 p-4 transition hover:border-indigo-500/40 hover:bg-slate-900/60">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600/20 text-xs font-bold text-indigo-300">{item.step}</span>
+                    <span className="text-lg">{item.icon}</span>
+                  </div>
+                  <p className="font-semibold text-white text-sm">{item.label}</p>
+                  <p className="mt-1 text-xs text-slate-400">{item.desc}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Trial expiry warning */}
+      {trialExpiringSoon && (
+        <div className={`rounded-3xl border p-5 shadow-lg ${trialDaysLeft! <= 2 ? "border-rose-500/40 bg-gradient-to-br from-rose-950/30 to-slate-900/20" : "border-amber-500/40 bg-gradient-to-br from-amber-950/30 to-slate-900/20"}`}>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-xs uppercase tracking-widest text-indigo-400 font-semibold">Upgrade ke Premium</p>
-              <h2 className="mt-3 text-2xl font-bold text-white">Buka potensi penuh klinik Anda</h2>
-              <p className="mt-2 max-w-2xl text-slate-400">
-                Dapatkan akses multi cabang, dashboard advanced, laporan SLA, dan prioritas support untuk operasi yang lebih profesional.
+              <p className={`text-xs font-bold uppercase tracking-widest ${trialDaysLeft! <= 2 ? "text-rose-400" : "text-amber-400"}`}>
+                {trialDaysLeft! <= 2 ? "⚠️ Trial hampir berakhir!" : "🔔 Pengingat trial"}
               </p>
+              <p className="mt-1 font-bold text-white">
+                Trial Anda berakhir dalam <span className={trialDaysLeft! <= 2 ? "text-rose-300" : "text-amber-300"}>{trialDaysLeft} hari</span>
+              </p>
+              <p className="mt-1 text-sm text-slate-400">Aktifkan paket sekarang agar operasional klinik tidak terganggu.</p>
             </div>
-            <Link href="/billing" className="btn-primary w-full max-w-[220px] text-center">
-              Lihat Paket Premium
+            <Link href="/billing" className="btn-primary shrink-0 text-center">
+              Aktifkan Paket →
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Upgrade Banner — plan-aware */}
+      {nextPlan && !trialExpiringSoon && (
+        <div className="rounded-3xl border border-indigo-500/20 bg-gradient-to-br from-indigo-950/20 to-slate-900/20 p-5 shadow-lg">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-indigo-400">Upgrade ke {nextPlan.name}</p>
+              <p className="mt-1 font-bold text-white">{nextPlan.benefit}</p>
+            </div>
+            <Link href="/billing" className="btn-secondary shrink-0 text-center text-sm">
+              Lihat Paket {nextPlan.name} →
             </Link>
           </div>
         </div>
@@ -746,12 +808,13 @@ export default function DashboardPage() {
         </div>
 
         <div className="space-y-6">
-          <DashboardPanel title="Demografi Pasien">
+          <DashboardPanel title="Demografi Pasien" action="Estimasi">
             {stats.patients === 0 ? (
               <div className="flex h-44 flex-col items-center justify-center gap-2 text-center">
-                <span className="text-3xl opacity-30">◎</span>
+                <span className="text-3xl opacity-20">◎</span>
                 <p className="text-sm font-medium text-slate-400">Belum ada data pasien</p>
-                <p className="text-xs text-slate-500">Grafik demografi akan muncul setelah pasien pertama terdaftar.</p>
+                <p className="text-xs text-slate-500">Grafik akan muncul setelah pasien pertama terdaftar.</p>
+                <Link href="/patients" className="mt-2 text-xs font-semibold text-indigo-400 hover:text-indigo-300">Daftarkan pasien →</Link>
               </div>
             ) : (
               <div className="grid grid-cols-1 items-center gap-4 md:grid-cols-[180px_1fr]">
