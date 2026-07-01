@@ -514,6 +514,76 @@ export default function DashboardPage() {
         ))}
       </div>
 
+      {/* ── Plan-specific highlight panels ─────────────────────────────────── */}
+
+      {/* Standard+: Antrian Live Panel */}
+      {hasQueue && (
+        <div className="rounded-3xl border border-cyan-500/20 bg-gradient-to-br from-cyan-950/25 via-slate-900/20 to-slate-900/10 p-5 shadow-md">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-cyan-400">● Live · Antrian Hari Ini</p>
+              <p className="mt-1 text-base font-bold text-white">Status Antrean Real-Time</p>
+            </div>
+            <Link href="/pelayanan/antrian-poli" className="text-xs font-semibold text-cyan-400 hover:text-cyan-300">Kelola Antrian →</Link>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "Menunggu", value: queueNow.waiting, color: "text-amber-300", border: "border-amber-600/20 bg-amber-950/20" },
+              { label: "Dipanggil", value: queueNow.called,  color: "text-sky-300",   border: "border-sky-600/20 bg-sky-950/20" },
+              { label: "Dilayani",  value: queueNow.serving, color: "text-emerald-300", border: "border-emerald-600/20 bg-emerald-950/20" },
+            ].map((s) => (
+              <div key={s.label} className={`rounded-2xl border ${s.border} p-4 text-center`}>
+                <p className="text-xs font-semibold text-slate-400">{s.label}</p>
+                <p className={`mt-2 text-3xl font-bold ${s.color}`}>{s.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Pro+: Kasir & Stok Panel */}
+      {hasCashier && (
+        <div className="rounded-3xl border border-emerald-500/20 bg-gradient-to-br from-emerald-950/25 via-slate-900/20 to-slate-900/10 p-5 shadow-md">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-emerald-400">Keuangan & Operasional</p>
+              <p className="mt-1 text-base font-bold text-white">Ringkasan Kasir & Stok Hari Ini</p>
+            </div>
+            <Link href="/invoice" className="text-xs font-semibold text-emerald-400 hover:text-emerald-300">Buka Kasir →</Link>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { label: "Revenue Hari Ini", value: `Rp ${currencyFormatter.format(todayStats.revenue_today ?? 0)}`, color: "text-emerald-300", border: "border-emerald-600/20 bg-emerald-950/20" },
+              { label: "Revenue Bulan Ini", value: `Rp ${(revenueThisMonth / 1_000_000).toFixed(1)}jt`, color: "text-emerald-300", border: "border-emerald-600/20 bg-emerald-950/20" },
+              { label: "Invoice Pending", value: pendingCount, color: "text-amber-300", border: "border-amber-600/20 bg-amber-950/20" },
+              { label: "Stok Menipis", value: lowStockCount, color: lowStockCount > 0 ? "text-rose-300" : "text-slate-300", border: lowStockCount > 0 ? "border-rose-600/20 bg-rose-950/20" : "border-slate-600/20 bg-slate-900/30" },
+            ].map((s) => (
+              <div key={s.label} className={`rounded-2xl border ${s.border} p-4`}>
+                <p className="text-xs font-semibold text-slate-400">{s.label}</p>
+                <p className={`mt-2 text-xl font-bold ${s.color}`}>{s.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Premium: Exclusive status panel */}
+      {activePlanCode === "premium" && (
+        <div className="rounded-3xl border border-yellow-500/20 bg-gradient-to-br from-yellow-950/15 via-indigo-950/15 to-slate-900/10 p-5 shadow-md">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-yellow-400">✦ Premium Plan Aktif</p>
+              <p className="mt-1 text-base font-bold text-white">Semua fitur klinik tersedia — termasuk Multi Cabang & Laporan SLA</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {["Multi Cabang", "Laporan SLA", "Custom Workflow", "Prioritas Support"].map((f) => (
+                <span key={f} className="rounded-full border border-yellow-500/20 bg-yellow-950/20 px-3 py-1 text-xs font-semibold text-yellow-300">{f}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Onboarding checklist — hanya tampil saat klinik baru (belum ada data) */}
       {isNewUser && (
         <div className="rounded-3xl border border-indigo-500/30 bg-gradient-to-br from-indigo-950/30 to-slate-900/20 p-6 shadow-lg">
