@@ -438,7 +438,6 @@ export default function DashboardPage() {
     },
   ]
   const statCards = allStatCards.filter((c) => c.show)
-  ]
 
   const canOpenHref = (href: string) => {
     const item = menuItemByHref.get(href)
@@ -501,13 +500,13 @@ export default function DashboardPage() {
       </div>
 
       {/* Hari Ini Sekilas */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className={`grid gap-3 ${hasCashier ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-3"}`}>
         {[
-          { label: "Janji Hari Ini", value: todayStats.total, color: "text-sky-400" },
-          { label: "Sudah Selesai", value: todayStats.done, color: "text-emerald-400" },
-          { label: "Invoice Pending", value: pendingCount, color: "text-amber-400" },
-          { label: "Revenue Hari Ini", value: `Rp ${currencyFormatter.format(todayStats.revenue_today ?? 0)}`, color: "text-indigo-400" },
-        ].map((item) => (
+          { label: "Janji Hari Ini", value: todayStats.total, color: "text-sky-400", show: true },
+          { label: "Sudah Selesai", value: todayStats.done, color: "text-emerald-400", show: true },
+          { label: "Booking Pending", value: pendingCount, color: "text-amber-400", show: true },
+          { label: "Revenue Hari Ini", value: `Rp ${currencyFormatter.format(todayStats.revenue_today ?? 0)}`, color: "text-indigo-400", show: hasCashier },
+        ].filter((i) => i.show).map((item) => (
           <div key={item.label} className="rounded-2xl border border-slate-700/20 bg-slate-900/30 px-4 py-3">
             <p className="text-xs text-slate-500 font-medium">{item.label}</p>
             <p className={`mt-1 text-lg font-bold ${item.color}`}>{item.value}</p>
@@ -599,9 +598,7 @@ export default function DashboardPage() {
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-slate-400">{card.label}</p>
                   <h3 className="mt-3 text-2xl font-bold text-white truncate">{card.value}</h3>
-                  <p className={`mt-2 text-xs font-semibold ${card.deltaColor}`}>
-                    {card.delta}{card.deltaLabel ? ` ${card.deltaLabel}` : ""}
-                  </p>
+                  <p className={`mt-2 text-xs font-semibold ${card.deltaColor}`}>{card.delta}</p>
                 </div>
                 <div className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl ${card.iconBg}`}>
                   <card.Icon size={22} />
@@ -665,12 +662,15 @@ export default function DashboardPage() {
         </div>
       </DashboardPanel>
 
-      {/* Section 3 — Grid bawah: Top Dokter & Antrian Hari Ini */}
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        {/* Top Dokter Bulan Ini */}
+      {/* Section 3 — Top Dokter & Antrian (antrian hanya Standard+) */}
+      <div className={`grid grid-cols-1 gap-6 ${hasQueue ? "xl:grid-cols-2" : ""}`}>
         <DashboardPanel title="Top Dokter Bulan Ini" action="5 Terbaik">
           {topDoctors.length === 0 ? (
-            <p className="text-sm text-slate-400">Belum ada data booking bulan ini.</p>
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+              <span className="text-3xl opacity-20">🩺</span>
+              <p className="text-sm text-slate-400">Belum ada data kunjungan bulan ini.</p>
+              <Link href="/doctors" className="mt-1 text-xs font-semibold text-indigo-400 hover:text-indigo-300">Tambah dokter →</Link>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -679,25 +679,21 @@ export default function DashboardPage() {
                     <th className="pb-3 text-left text-xs font-semibold text-slate-500">Dokter</th>
                     <th className="pb-3 text-left text-xs font-semibold text-slate-500">Spesialisasi</th>
                     <th className="pb-3 text-right text-xs font-semibold text-slate-500">Kunjungan</th>
-                    <th className="pb-3 text-right text-xs font-semibold text-slate-500">Revenue</th>
+                    {hasRevenue && <th className="pb-3 text-right text-xs font-semibold text-slate-500">Revenue</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700/20">
                   {topDoctors.map((doc, i) => (
-                    <tr key={doc.name + i} className="group">
+                    <tr key={doc.name + i}>
                       <td className="py-3">
                         <div className="flex items-center gap-2">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600/20 text-xs font-bold text-indigo-300">
-                            {i + 1}
-                          </span>
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600/20 text-xs font-bold text-indigo-300">{i + 1}</span>
                           <span className="font-semibold text-white truncate max-w-[120px]">{doc.name}</span>
                         </div>
                       </td>
                       <td className="py-3 text-slate-400 truncate max-w-[100px]">{doc.specialization}</td>
                       <td className="py-3 text-right font-bold text-white">{doc.bookings}</td>
-                      <td className="py-3 text-right text-emerald-400 text-xs font-semibold">
-                        Rp {currencyFormatter.format(doc.revenue)}
-                      </td>
+                      {hasRevenue && <td className="py-3 text-right text-emerald-400 text-xs font-semibold">Rp {currencyFormatter.format(doc.revenue)}</td>}
                     </tr>
                   ))}
                 </tbody>
@@ -706,54 +702,55 @@ export default function DashboardPage() {
           )}
         </DashboardPanel>
 
-        {/* Antrian Hari Ini — Timeline */}
-        <DashboardPanel title="Antrian Hari Ini" action="Live">
-          <div className="mb-4 flex gap-3">
-            <div className="flex-1 rounded-2xl border border-amber-600/20 bg-amber-950/20 p-3 text-center">
-              <p className="text-xs text-amber-400 font-semibold">Menunggu</p>
-              <p className="mt-1 text-2xl font-bold text-white">{queueNow.waiting}</p>
-            </div>
-            <div className="flex-1 rounded-2xl border border-sky-600/20 bg-sky-950/20 p-3 text-center">
-              <p className="text-xs text-sky-400 font-semibold">Dipanggil</p>
-              <p className="mt-1 text-2xl font-bold text-white">{queueNow.called}</p>
-            </div>
-            <div className="flex-1 rounded-2xl border border-emerald-600/20 bg-emerald-950/20 p-3 text-center">
-              <p className="text-xs text-emerald-400 font-semibold">Dilayani</p>
-              <p className="mt-1 text-2xl font-bold text-white">{queueNow.serving}</p>
-            </div>
-          </div>
-          {queueEntries.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
-              <span className="text-2xl opacity-30">◎</span>
-              <p className="text-sm text-slate-400">Tidak ada antrian aktif saat ini.</p>
-            </div>
-          ) : (
-            <div className="relative max-h-52 overflow-y-auto pl-5">
-              <div className="absolute left-5 top-2 bottom-2 w-px bg-slate-700/40" />
-              <div className="space-y-4">
-                {queueEntries.map((entry) => {
-                  const dotColor =
-                    entry.status === "serving" ? "bg-emerald-400 shadow-emerald-400/50" :
-                    entry.status === "called" ? "bg-sky-400 shadow-sky-400/50" :
-                    entry.status === "paid" ? "bg-indigo-400 shadow-indigo-400/50" :
-                    "bg-amber-400 shadow-amber-400/50"
-                  return (
-                    <div key={entry.id} className="relative flex items-start gap-4 pl-4">
-                      <span className={`absolute -left-[3px] mt-1.5 h-2.5 w-2.5 rounded-full shadow-md ${dotColor}`} />
-                      <div className="flex w-full items-center justify-between rounded-2xl border border-slate-700/20 bg-slate-900/20 px-3 py-2">
-                        <div>
-                          <p className="text-sm font-semibold text-white">{entry.patients?.name || "—"}</p>
-                          <p className="text-xs text-slate-500">{entry.doctors?.name || "Umum"}</p>
-                        </div>
-                        <div>{statusBadge(entry.status)}</div>
-                      </div>
-                    </div>
-                  )
-                })}
+        {hasQueue && (
+          <DashboardPanel title="Antrian Hari Ini" action="Live">
+            <div className="mb-4 flex gap-3">
+              <div className="flex-1 rounded-2xl border border-amber-600/20 bg-amber-950/20 p-3 text-center">
+                <p className="text-xs text-amber-400 font-semibold">Menunggu</p>
+                <p className="mt-1 text-2xl font-bold text-white">{queueNow.waiting}</p>
+              </div>
+              <div className="flex-1 rounded-2xl border border-sky-600/20 bg-sky-950/20 p-3 text-center">
+                <p className="text-xs text-sky-400 font-semibold">Dipanggil</p>
+                <p className="mt-1 text-2xl font-bold text-white">{queueNow.called}</p>
+              </div>
+              <div className="flex-1 rounded-2xl border border-emerald-600/20 bg-emerald-950/20 p-3 text-center">
+                <p className="text-xs text-emerald-400 font-semibold">Dilayani</p>
+                <p className="mt-1 text-2xl font-bold text-white">{queueNow.serving}</p>
               </div>
             </div>
-          )}
-        </DashboardPanel>
+            {queueEntries.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
+                <span className="text-2xl opacity-30">◎</span>
+                <p className="text-sm text-slate-400">Tidak ada antrian aktif saat ini.</p>
+              </div>
+            ) : (
+              <div className="relative max-h-52 overflow-y-auto pl-5">
+                <div className="absolute left-5 top-2 bottom-2 w-px bg-slate-700/40" />
+                <div className="space-y-4">
+                  {queueEntries.map((entry) => {
+                    const dotColor =
+                      entry.status === "serving" ? "bg-emerald-400 shadow-emerald-400/50" :
+                      entry.status === "called"  ? "bg-sky-400 shadow-sky-400/50" :
+                      entry.status === "paid"    ? "bg-indigo-400 shadow-indigo-400/50" :
+                      "bg-amber-400 shadow-amber-400/50"
+                    return (
+                      <div key={entry.id} className="relative flex items-start gap-4 pl-4">
+                        <span className={`absolute -left-[3px] mt-1.5 h-2.5 w-2.5 rounded-full shadow-md ${dotColor}`} />
+                        <div className="flex w-full items-center justify-between rounded-2xl border border-slate-700/20 bg-slate-900/20 px-3 py-2">
+                          <div>
+                            <p className="text-sm font-semibold text-white">{entry.patients?.name || "—"}</p>
+                            <p className="text-xs text-slate-500">{entry.doctors?.name || "Umum"}</p>
+                          </div>
+                          <div>{statusBadge(entry.status)}</div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </DashboardPanel>
+        )}
       </div>
 
       {/* Section 4 — Aktivitas Terbaru (5 booking hari ini) */}
@@ -783,7 +780,7 @@ export default function DashboardPage() {
         )}
       </DashboardPanel>
 
-      {/* Grafik lama — Pendapatan & Demografi */}
+      {/* Grafik bawah — Pendaftaran & Demografi (Revenue hanya Pro+) */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.25fr_0.75fr]">
         <div className="space-y-6">
           <DashboardPanel title="Grafik Pendaftaran (7 Hari)" action="Detail">
@@ -799,11 +796,11 @@ export default function DashboardPage() {
             </div>
           </DashboardPanel>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <div className={`grid grid-cols-1 gap-4 ${hasRevenue ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
             <SmallMetric label="Rata-rata Waktu Tunggu" value={`${avgWaitMinutes} mnt`} note="Estimasi hari ini" icon="◷" />
             <SmallMetric label="Booking Belum Bayar" value={pendingCount.toLocaleString("id-ID")} note="Perlu konfirmasi" icon="▣" />
             <SmallMetric label="Pasien Baru Bulan Ini" value={newPatientsThisMonth.toLocaleString("id-ID")} note={`${pctChange(newPatientsThisMonth, newPatientsLastMonth)} vs bulan lalu`} icon="◇" />
-            <SmallMetric label="Pendapatan Bulan Ini" value={`Rp ${(revenueThisMonth / 1000).toFixed(0)}rb`} note={`${pctChange(revenueThisMonth, revenueLastMonth)} vs bulan lalu`} icon="☆" />
+            {hasRevenue && <SmallMetric label="Pendapatan Bulan Ini" value={`Rp ${(revenueThisMonth / 1000).toFixed(0)}rb`} note={`${pctChange(revenueThisMonth, revenueLastMonth)} vs bulan lalu`} icon="☆" />}
           </div>
         </div>
 
@@ -844,18 +841,20 @@ export default function DashboardPage() {
             )}
           </DashboardPanel>
 
-          <DashboardPanel title="Pendapatan 7 Hari Terakhir">
-            <div className="h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={legacyChartData}>
-                  <XAxis dataKey="label" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${Number(value) / 1000} rb`} />
-                  <Tooltip formatter={(value) => `Rp ${currencyFormatter.format(Number(value))}`} contentStyle={{ background: "#111827", border: "1px solid rgba(148,163,184,.25)", borderRadius: 16 }} />
-                  <Area type="monotone" dataKey="pendapatan" stroke="#22c55e" fill="#22c55e" fillOpacity={0.16} strokeWidth={3} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </DashboardPanel>
+          {hasRevenue && (
+            <DashboardPanel title="Pendapatan 7 Hari Terakhir">
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={legacyChartData}>
+                    <XAxis dataKey="label" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${Number(value) / 1000} rb`} />
+                    <Tooltip formatter={(value) => `Rp ${currencyFormatter.format(Number(value))}`} contentStyle={{ background: "#111827", border: "1px solid rgba(148,163,184,.25)", borderRadius: 16 }} />
+                    <Area type="monotone" dataKey="pendapatan" stroke="#22c55e" fill="#22c55e" fillOpacity={0.16} strokeWidth={3} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </DashboardPanel>
+          )}
         </div>
       </div>
 
